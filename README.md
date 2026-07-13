@@ -9,6 +9,8 @@ The demo has two product stories:
 
 MongoDB is the code authority. LLMs are optional helpers for extracting what to look up; they do not invent or assign codes without MongoDB candidate retrieval and reviewer confirmation.
 
+> **New to this demo? Start with the [Solution Overview](docs/SOLUTION_OVERVIEW.md)** — a business and functional view for solution architects and technical sales: the problem it solves, why the document model consolidates four data stores into one, the value drivers, and a suggested demo flow. This README covers the technical setup.
+
 ## What Is Included
 
 - Next.js app with UI workbenches for Overview, Navigation, Ground a Note, API, and Benchmark.
