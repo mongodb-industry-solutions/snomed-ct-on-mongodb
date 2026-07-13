@@ -1,0 +1,79 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.claude/
+
+# Logs
+*.log
+*.pid
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment / credentials
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+dotenv.local
+dotenv.*.local
+*.env.local
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+
+# Node / Next.js build output
+node_modules/
+**/node_modules/
+.next/
+.next*/
+**/.next/
+**/.next*/
+out/
+**/out/
+coverage/
+**/coverage/
+dist/
+**/dist/
+build/
+**/build/
+.turbo/
+**/.turbo/
+*.tsbuildinfo
+
+# Local raw data and release artifacts
+_rf2_tmp/
+data/
+tmp/
+dump/
+mongodb-dump/
+*.bson
+*.bson.gz
+*.archive
+*.mongodump
+*.ndjson
+*.jsonl
+*.csv
+*.tsv
+SnomedCT_SpainExtension_ES_PRODUCTION_*/
+SnomedCT_*/
+SnomedCT_SpainExtension_ES_PRODUCTION_*.zip
+SnomedCT_*.zip
+irbd_json_*.json
+GuiaAccesoServidorFTP_ES.pdf
+ISTTH-31 - CI_CD Implementations to Demo Solutions.pdf
+
+# Deployment-generated local artifacts
+gcp-credential-config*.json
+kanopy-debug/
+environment/*.local.yaml
+environment/*.override.yaml

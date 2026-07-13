@@ -1,0 +1,34 @@
+{
+  "name": "snomed-ct-on-mongodb",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 0.0.0.0 --port ${PORT:-3015}",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0 --port ${PORT:-3015}",
+    "projection:build": "node scripts/buildProjection.mjs",
+    "terms:rebuild": "node scripts/rebuildTermProjection.mjs",
+    "terms:rebuild:clean": "TERM_PROJECTION_CLEAR_TERMS=true npm run terms:rebuild",
+    "terms:rebuild:replace": "TERM_PROJECTION_REPLACE_RELEASE=true npm run terms:rebuild",
+    "terms:rebuild:smoke": "TERM_PROJECTION_SCOPE=smoke npm run terms:rebuild",
+    "terms:rebuild:full": "TERM_PROJECTION_SCOPE=full npm run terms:rebuild",
+    "indexes:build": "node scripts/buildPlatformIndexes.mjs",
+    "collections:retire": "node scripts/dropRetiredCollections.mjs",
+    "releaseid:stamp": "node scripts/stampReleaseId.mjs",
+    "model:harden": "node scripts/normalizeSourceModel.mjs"
+  },
+  "dependencies": {
+    "@leafygreen-ui/badge": "^10.2.4",
+    "@leafygreen-ui/code": "^20.2.7",
+    "@leafygreen-ui/leafygreen-provider": "^5.0.4",
+    "@xyflow/react": "^12.11.1",
+    "mongodb": "^6.20.0",
+    "next": "^15.5.18",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "overrides": {
+    "postcss": "^8.5.10"
+  }
+}

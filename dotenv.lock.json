@@ -1,0 +1,614 @@
+{
+  "version": 1,
+  "updated": "2026-07-07",
+  "exampleFile": ".env.example",
+  "policy": {
+    "envLocal": "Local only. Keep credentials, cluster endpoints, and machine-specific overrides out of git.",
+    "defaults": "Defaults mirror the current application and script defaults. Override only when your environment differs.",
+    "retired": "Retired cohort, refset, binding, mapping, old projection alias, and internal deployment variables are not part of this contract."
+  },
+  "variables": {
+    "MONGODB_URI": {
+      "category": "mongodb",
+      "required": true,
+      "secret": true,
+      "default": null,
+      "description": "MongoDB connection string for the terminology database."
+    },
+    "MONGODB_AUTH_SOURCE": {
+      "category": "mongodb",
+      "required": false,
+      "secret": false,
+      "default": "",
+      "description": "Optional authentication database when not encoded in MONGODB_URI."
+    },
+    "MONGODB_DB": {
+      "category": "mongodb",
+      "required": false,
+      "secret": false,
+      "default": "terminology",
+      "description": "Database containing the SNOMED CT demo collections."
+    },
+    "MONGODB_COLLECTION": {
+      "category": "mongodb",
+      "required": false,
+      "secret": false,
+      "default": "snomed-irbd",
+      "description": "Canonical SNOMED CT concept collection."
+    },
+    "MONGODB_TERM_SEARCH_COLLECTION": {
+      "category": "mongodb",
+      "required": false,
+      "secret": false,
+      "default": "snomed-term-search",
+      "description": "Single term-level search sidecar collection."
+    },
+    "MONGODB_USAGE_EVENT_COLLECTION": {
+      "category": "mongodb",
+      "required": false,
+      "secret": false,
+      "default": "snomed-usage-events",
+      "description": "Lightweight search/navigation telemetry collection."
+    },
+    "SNOMED_RELEASE_ID": {
+      "category": "runtime",
+      "required": false,
+      "secret": false,
+      "default": "20260601",
+      "description": "Release scope used by runtime search and ECL APIs."
+    },
+    "ECL_MAX_RESULTS": {
+      "category": "runtime",
+      "required": false,
+      "secret": false,
+      "default": "200000",
+      "description": "Upper bound for ECL expansion results."
+    },
+    "SMARTSEARCH_SCOPE_MAX_IDS": {
+      "category": "runtime",
+      "required": false,
+      "secret": false,
+      "default": "20000",
+      "description": "Maximum scoped IDs used by smart search filters."
+    },
+    "HIERARCHY_CACHE_TTL_SECONDS": {
+      "category": "runtime",
+      "required": false,
+      "secret": false,
+      "default": "86400",
+      "description": "Concept hierarchy cache TTL."
+    },
+    "HIERARCHY_CACHE_MAX_ENTRIES": {
+      "category": "runtime",
+      "required": false,
+      "secret": false,
+      "default": "5000",
+      "description": "Concept hierarchy cache size."
+    },
+    "SEMANTICS_SCOPE_CACHE_TTL_SECONDS": {
+      "category": "runtime",
+      "required": false,
+      "secret": false,
+      "default": "86400",
+      "description": "ECL/scope cache TTL."
+    },
+    "SEMANTICS_SCOPE_CACHE_MAX_ENTRIES": {
+      "category": "runtime",
+      "required": false,
+      "secret": false,
+      "default": "5000",
+      "description": "ECL/scope cache size."
+    },
+    "MONGODB_SEARCH_INDEX": {
+      "category": "searchIndexes",
+      "required": false,
+      "secret": false,
+      "default": "snomed_text_idx",
+      "description": "MongoDB Search index name for lexical term search."
+    },
+    "MONGODB_VECTOR_INDEX": {
+      "category": "searchIndexes",
+      "required": false,
+      "secret": false,
+      "default": "snomed_voyage_idx",
+      "description": "MongoDB Vector Search index name."
+    },
+    "MONGODB_VECTOR_MODE": {
+      "category": "searchIndexes",
+      "required": false,
+      "secret": false,
+      "default": "autoEmbed",
+      "description": "Vector mode: autoEmbed or manual."
+    },
+    "MONGODB_VECTOR_PATH": {
+      "category": "searchIndexes",
+      "required": false,
+      "secret": false,
+      "default": "embedText",
+      "description": "Text path for auto-embedding or vector array path for manual mode."
+    },
+    "MONGODB_VECTOR_AUTO_EMBED_MODEL": {
+      "category": "searchIndexes",
+      "required": false,
+      "secret": false,
+      "default": "voyage-4",
+      "description": "MongoDB automated embedding model."
+    },
+    "MONGODB_VECTOR_AUTO_EMBED_MODALITY": {
+      "category": "searchIndexes",
+      "required": false,
+      "secret": false,
+      "default": "text",
+      "description": "MongoDB automated embedding modality."
+    },
+    "MONGODB_VECTOR_FILTER_PATHS": {
+      "category": "searchIndexes",
+      "required": false,
+      "secret": false,
+      "default": "releaseId,languageCode,conceptId,semanticTag,semanticTagKey,termType,typeId,definitionStatusId,conceptActive,preferred,topRoots,areaTags,parentIds,ancestorIds,releaseDate",
+      "description": "Filter fields exposed in the vector search index."
+    },
+    "MONGODB_MANUAL_VECTOR_PATH": {
+      "category": "searchIndexes",
+      "required": false,
+      "secret": false,
+      "default": "embedding_voyage_4_lite_256",
+      "description": "Stored vector array path used only by manual embedding fallback."
+    },
+    "MONGODB_VECTOR_DIMENSIONS": {
+      "category": "searchIndexes",
+      "required": false,
+      "secret": false,
+      "default": "256",
+      "description": "Manual vector dimensions."
+    },
+    "MONGODB_VECTOR_SIMILARITY": {
+      "category": "searchIndexes",
+      "required": false,
+      "secret": false,
+      "default": "cosine",
+      "description": "Manual vector similarity metric."
+    },
+    "BUILD_MONGODB_SEARCH_INDEXES": {
+      "category": "searchIndexes",
+      "required": false,
+      "secret": false,
+      "default": "true",
+      "description": "Enable MongoDB Search index creation/update in indexes:build."
+    },
+    "BUILD_MONGODB_VECTOR_INDEX": {
+      "category": "searchIndexes",
+      "required": false,
+      "secret": false,
+      "default": "true",
+      "description": "Enable MongoDB Vector Search index creation/update in indexes:build."
+    },
+    "HYBRID_FUSION_MODE": {
+      "category": "hybridSearch",
+      "required": false,
+      "secret": false,
+      "default": "rankFusion",
+      "description": "Hybrid search fusion strategy."
+    },
+    "HYBRID_NATIVE_FUSION_MAX_TIME_MS": {
+      "category": "hybridSearch",
+      "required": false,
+      "secret": false,
+      "default": "8000",
+      "description": "Timeout guard for native MongoDB fusion plans."
+    },
+    "HYBRID_CANDIDATE_POOL": {
+      "category": "hybridSearch",
+      "required": false,
+      "secret": false,
+      "default": "40",
+      "description": "Candidates retrieved per engine before fusion."
+    },
+    "HYBRID_RRF_K": {
+      "category": "hybridSearch",
+      "required": false,
+      "secret": false,
+      "default": "60",
+      "description": "Reciprocal rank fusion constant."
+    },
+    "HYBRID_RERANK_POOL": {
+      "category": "hybridSearch",
+      "required": false,
+      "secret": false,
+      "default": "40",
+      "description": "Maximum fused concepts passed to rerank."
+    },
+    "ENABLE_HYBRID_GROUNDING": {
+      "category": "hybridSearch",
+      "required": false,
+      "secret": false,
+      "default": "false",
+      "description": "Opt-in hybrid retrieval for note grounding."
+    },
+    "HYBRID_GROUNDING_POOL": {
+      "category": "hybridSearch",
+      "required": false,
+      "secret": false,
+      "default": "20",
+      "description": "Grounding candidate pool when hybrid grounding is enabled."
+    },
+    "VOYAGE_API_KEY": {
+      "category": "voyage",
+      "required": false,
+      "secret": true,
+      "default": "",
+      "description": "Voyage key for reranking and manual embedding fallback."
+    },
+    "VOYAGE_API_BASE_URL": {
+      "category": "voyage",
+      "required": false,
+      "secret": false,
+      "default": "",
+      "description": "Optional Voyage-compatible rerank base URL."
+    },
+    "VOYAGE_RERANK_MODEL": {
+      "category": "voyage",
+      "required": false,
+      "secret": false,
+      "default": "rerank-2.5",
+      "description": "Voyage rerank model."
+    },
+    "VOYAGE_TIMEOUT_MS": {
+      "category": "voyage",
+      "required": false,
+      "secret": false,
+      "default": "8000",
+      "description": "Voyage rerank timeout."
+    },
+    "ENABLE_LLM_GROUNDING": {
+      "category": "llm",
+      "required": false,
+      "secret": false,
+      "default": "false",
+      "description": "Enable optional LLM assistance."
+    },
+    "LLM_BASE_URL": {
+      "category": "llm",
+      "required": false,
+      "secret": false,
+      "default": "",
+      "description": "OpenAI-compatible Responses API base URL."
+    },
+    "LLM_API_KEY": {
+      "category": "llm",
+      "required": false,
+      "secret": true,
+      "default": "",
+      "description": "API key for the configured LLM gateway."
+    },
+    "LLM_AUTH_HEADER": {
+      "category": "llm",
+      "required": false,
+      "secret": false,
+      "default": "api-key",
+      "description": "Auth header strategy: api-key or authorization-bearer."
+    },
+    "LLM_API_STYLE": {
+      "category": "llm",
+      "required": false,
+      "secret": false,
+      "default": "chat",
+      "description": "Gateway API style: chat or responses."
+    },
+    "LLM_GROUNDING_MODEL": {
+      "category": "llm",
+      "required": false,
+      "secret": false,
+      "default": "gpt-5.5",
+      "description": "Default extraction/review model."
+    },
+    "LLM_GROUNDING_MODELS": {
+      "category": "llm",
+      "required": false,
+      "secret": false,
+      "default": "gpt-5.5",
+      "description": "Server-side comma-separated benchmark/model-picker list."
+    },
+    "LLM_GROUNDING_MAX_TOKENS": {
+      "category": "llm",
+      "required": false,
+      "secret": false,
+      "default": "4096",
+      "description": "Maximum LLM response tokens for structured grounding output."
+    },
+    "NEXT_PUBLIC_LLM_GROUNDING_MODELS": {
+      "category": "llm",
+      "required": false,
+      "secret": false,
+      "default": "gpt-5.5",
+      "description": "Browser-visible comma-separated model list."
+    },
+    "TERM_PROJECTION_SCOPE": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "demo",
+      "description": "Sidecar rebuild scope: smoke, demo, explicit, area, or full."
+    },
+    "TERM_PROJECTION_RESET": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "false",
+      "description": "Drop/rebuild the sidecar collection."
+    },
+    "TERM_PROJECTION_CLEAR_TERMS": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "false",
+      "description": "Clear term docs for the selected release before rebuild."
+    },
+    "TERM_PROJECTION_REPLACE_RELEASE": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "false",
+      "description": "Replace all sidecar docs for the selected release before rebuild."
+    },
+    "TERM_PROJECTION_INCLUDE_ALL_RELEASES": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "false",
+      "description": "Build sidecar docs across all releases."
+    },
+    "TERM_PROJECTION_EMBED": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "false",
+      "description": "Enable manual embedding generation after term projection."
+    },
+    "PROJECTION_BUILD_ENABLED": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "true",
+      "description": "Direct projection builder toggle."
+    },
+    "PROJECTION_RESET_BEFORE_BUILD": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "false",
+      "description": "Direct projection builder collection reset toggle."
+    },
+    "PROJECTION_LANGUAGE_CODES": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "en,es",
+      "description": "Languages projected into the term sidecar."
+    },
+    "PROJECTION_INCLUDE_ALL_RELEASES": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "false",
+      "description": "Direct projection builder release filter toggle."
+    },
+    "PROJECTION_TOP_ROOT_IDS": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "123037004,404684003,71388002,373873005,272379006,243796009,260787004,78621006,362981000",
+      "description": "SNOMED top roots used to tag search documents."
+    },
+    "PROJECTION_CONCEPT_IDS": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "",
+      "description": "Explicit concept IDs for scoped sidecar rebuilds."
+    },
+    "PROJECTION_AREA_CONCEPT_ID": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "",
+      "description": "Single hierarchy root for area-scoped sidecar rebuild."
+    },
+    "PROJECTION_AREA_CONCEPT_IDS": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "",
+      "description": "Multiple hierarchy roots for area-scoped sidecar rebuild."
+    },
+    "PROJECTION_AREA_RELATION": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "descendants",
+      "description": "Scope relation: descendants, ancestors, children, parents, or self."
+    },
+    "PROJECTION_INCLUDE_ROOT": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "true",
+      "description": "Include the area root itself in scoped projection."
+    },
+    "PROJECTION_MAX_CONCEPT_IDS": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "8000",
+      "description": "Maximum concept IDs per area branch."
+    },
+    "PROJECTION_MAX_TOTAL_CONCEPT_IDS": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "25000",
+      "description": "Maximum total concept IDs for multi-area rebuilds."
+    },
+    "PROJECTION_CLEAR_TERM_DOCS": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "false",
+      "description": "Direct projection builder clear toggle."
+    },
+    "PROJECTION_REPLACE_RELEASE_DOCS": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "false",
+      "description": "Direct projection builder release replacement toggle."
+    },
+    "PROJECTION_MAX_SYNONYMS": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "10",
+      "description": "Maximum synonyms copied onto each term document."
+    },
+    "PROJECTION_WRITE_BATCH_SIZE": {
+      "category": "termProjection",
+      "required": false,
+      "secret": false,
+      "default": "1000",
+      "description": "Bulk write batch size for sidecar rebuild."
+    },
+    "EMBED_ENABLED": {
+      "category": "manualEmbedding",
+      "required": false,
+      "secret": false,
+      "default": "false",
+      "description": "Enable manual embedding generation."
+    },
+    "EMBED_DRY_RUN": {
+      "category": "manualEmbedding",
+      "required": false,
+      "secret": false,
+      "default": "true",
+      "description": "Estimate manual embedding candidates without API calls."
+    },
+    "EMBED_AREA_CONCEPT_ID": {
+      "category": "manualEmbedding",
+      "required": false,
+      "secret": false,
+      "default": "",
+      "description": "Area root for manual embedding scope."
+    },
+    "EMBED_AREA_RELATION": {
+      "category": "manualEmbedding",
+      "required": false,
+      "secret": false,
+      "default": "descendants",
+      "description": "Manual embedding area relation."
+    },
+    "EMBED_ELIGIBLE_ANCESTOR_IDS": {
+      "category": "manualEmbedding",
+      "required": false,
+      "secret": false,
+      "default": "404684003,71388002,363787002,123037004,373873005",
+      "description": "Ancestor allowlist for building embedText/manual vectors."
+    },
+    "EMBED_INCLUDE_ROOT": {
+      "category": "manualEmbedding",
+      "required": false,
+      "secret": false,
+      "default": "true",
+      "description": "Include manual embedding area root."
+    },
+    "EMBED_MAX_CONCEPT_IDS": {
+      "category": "manualEmbedding",
+      "required": false,
+      "secret": false,
+      "default": "3000",
+      "description": "Manual embedding concept scope cap."
+    },
+    "EMBED_LANGUAGE_CODES": {
+      "category": "manualEmbedding",
+      "required": false,
+      "secret": false,
+      "default": "en,es",
+      "description": "Manual embedding language filter."
+    },
+    "VOYAGE_MODEL": {
+      "category": "manualEmbedding",
+      "required": false,
+      "secret": false,
+      "default": "voyage-4-lite",
+      "description": "Manual embedding model."
+    },
+    "VOYAGE_OUTPUT_DIMENSION": {
+      "category": "manualEmbedding",
+      "required": false,
+      "secret": false,
+      "default": "256",
+      "description": "Manual embedding output dimension."
+    },
+    "VECTOR_BATCH_SIZE": {
+      "category": "manualEmbedding",
+      "required": false,
+      "secret": false,
+      "default": "8",
+      "description": "Manual embedding request batch size."
+    },
+    "MAX_VECTOR_DOCS": {
+      "category": "manualEmbedding",
+      "required": false,
+      "secret": false,
+      "default": "300",
+      "description": "Manual embedding document cap."
+    },
+    "RELEASE_ID_TARGET": {
+      "category": "maintenance",
+      "required": false,
+      "secret": false,
+      "default": "20260601",
+      "description": "Release ID written by releaseid:stamp."
+    },
+    "RELEASE_DATE": {
+      "category": "maintenance",
+      "required": false,
+      "secret": false,
+      "default": "",
+      "description": "Optional release date override."
+    },
+    "RELEASE_LABEL": {
+      "category": "maintenance",
+      "required": false,
+      "secret": false,
+      "default": "",
+      "description": "Optional human-readable release label."
+    },
+    "RELEASE_ID_OVERWRITE": {
+      "category": "maintenance",
+      "required": false,
+      "secret": false,
+      "default": "false",
+      "description": "Overwrite existing release metadata during stamping."
+    },
+    "NORMALIZE_APPLY": {
+      "category": "maintenance",
+      "required": false,
+      "secret": false,
+      "default": "false",
+      "description": "Apply canonical model hardening instead of dry-run."
+    },
+    "GOLD_BASE_URL": {
+      "category": "benchmark",
+      "required": false,
+      "secret": false,
+      "default": "http://localhost:3015",
+      "description": "Base URL for gold-note and benchmark scripts."
+    },
+    "GOLD_SEARCH_TIMEOUT_MS": {
+      "category": "benchmark",
+      "required": false,
+      "secret": false,
+      "default": "15000",
+      "description": "Search timeout for gold-note and benchmark scripts."
+    }
+  }
+}

@@ -1,0 +1,1307 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SNOMED CT on MongoDB Demo API",
+    "version": "1.0.0",
+    "description": "Current API contract for the demo features that are backed by the MongoDB SNOMED data model: terminology search, semantic scope, ECL expansion, hierarchy navigation, note grounding, reviewer confirmation, and demo readiness checks.",
+    "contact": {
+      "name": "SNOMED CT on MongoDB Demo"
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Current deployment"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Navigation",
+      "description": "Search and suggest over the term-level SNOMED search projection."
+    },
+    {
+      "name": "Terminology",
+      "description": "ECL, hierarchy, and concept-history operations backed by the canonical SNOMED collection."
+    },
+    {
+      "name": "Grounding",
+      "description": "Clinical note grounding and reviewer-confirmed coding persistence."
+    },
+    {
+      "name": "Operations",
+      "description": "Readiness, health, and demo benchmark endpoints."
+    }
+  ],
+  "paths": {
+    "/api/navigator-search": {
+      "post": {
+        "tags": [
+          "Navigation"
+        ],
+        "summary": "Search SNOMED terms and concepts",
+        "description": "Runs lexical, vector, or hybrid SNOMED search against the term search projection. Optional area concept or ECL scope restricts the candidate set before ranking.",
+        "operationId": "navigatorSearch",
+        "x-demoStatus": "core",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NavigatorSearchRequest"
+              },
+              "example": {
+                "query": "heart failure",
+                "languageCode": "en",
+                "mode": "hybrid",
+                "limit": 10,
+                "ecl": "<< 404684003"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ranked terminology matches plus the generated MongoDB query plan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                },
+                "example": {
+                  "ok": true,
+                  "pattern": "navigator-search",
+                  "collection": "snomed-term-search",
+                  "mode": "hybrid",
+                  "strategy": "mongodb-rankFusion-rerank",
+                  "releaseId": "20260601",
+                  "stats": {
+                    "returned": 10,
+                    "scopeCount": 25000,
+                    "latencyMs": 480
+                  },
+                  "queryPlan": {
+                    "engine": "mongodb-rankFusion",
+                    "description": "Single MongoDB aggregation using MongoDB Search and MongoDB Vector Search fused by rankFusion."
+                  },
+                  "results": [
+                    {
+                      "conceptId": "84114007",
+                      "displayTerm": "Heart failure",
+                      "fsn": "Heart failure (disorder)",
+                      "semanticTag": "disorder",
+                      "preferred": true
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/navigator-suggest": {
+      "post": {
+        "tags": [
+          "Navigation"
+        ],
+        "summary": "Suggest terminology matches",
+        "description": "Lightweight MongoDB Search suggestion endpoint for typeahead and scoped discovery.",
+        "operationId": "navigatorSuggest",
+        "x-demoStatus": "core",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NavigatorSuggestRequest"
+              },
+              "example": {
+                "query": "cardiac",
+                "languageCode": "en",
+                "limit": 8,
+                "areaConceptId": "404684003"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Suggested concepts and terms.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                },
+                "example": {
+                  "ok": true,
+                  "pattern": "navigator-suggest",
+                  "strategy": "mongodb-suggest",
+                  "results": [
+                    {
+                      "conceptId": "49601007",
+                      "displayTerm": "Cardiovascular disease",
+                      "semanticTag": "disorder"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/ecl": {
+      "post": {
+        "tags": [
+          "Terminology"
+        ],
+        "summary": "Validate or expand an ECL expression",
+        "description": "Validates the supported ECL subset or expands it into a concept scope using the canonical SNOMED hierarchy and relationship attribute keys.",
+        "operationId": "ecl",
+        "x-demoStatus": "core",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EclRequest"
+              },
+              "examples": {
+                "validate": {
+                  "summary": "Validate only",
+                  "value": {
+                    "mode": "validate",
+                    "expr": "<< 404684003 : 363698007 = << 80891009"
+                  }
+                },
+                "expand": {
+                  "summary": "Expand to concepts",
+                  "value": {
+                    "mode": "expand",
+                    "expr": "<< 404684003",
+                    "languageCode": "en",
+                    "limit": 25
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation result or expanded concept scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EclResponse"
+                },
+                "example": {
+                  "ok": true,
+                  "pattern": "ecl-expand",
+                  "expr": "<< 404684003",
+                  "scope": {
+                    "mode": "ecl",
+                    "releaseId": "20260601",
+                    "count": 25000,
+                    "truncated": true
+                  },
+                  "concepts": [
+                    {
+                      "conceptId": "404684003",
+                      "preferredTerm": "Clinical finding",
+                      "semanticTag": "finding"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/hierarchy": {
+      "post": {
+        "tags": [
+          "Terminology"
+        ],
+        "summary": "Load a concept hierarchy view",
+        "description": "Returns a concept summary with parents, children, ancestors, descendants, descriptions, and relationship details for navigation.",
+        "operationId": "hierarchy",
+        "x-demoStatus": "core",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HierarchyRequest"
+              },
+              "example": {
+                "conceptId": "84114007",
+                "languageCode": "en"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Concept navigation payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "ok": true,
+                  "pattern": "hierarchy",
+                  "concept": {
+                    "conceptId": "84114007",
+                    "preferredTerm": "Heart failure",
+                    "fsn": "Heart failure (disorder)",
+                    "semanticTag": "disorder"
+                  },
+                  "parents": [
+                    {
+                      "conceptId": "56265001",
+                      "display": "Heart disease"
+                    }
+                  ],
+                  "children": []
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/concept-history": {
+      "get": {
+        "tags": [
+          "Terminology"
+        ],
+        "summary": "Inspect release history for a concept",
+        "description": "Returns release snapshots for one SNOMED concept when multiple release versions exist in the source collection.",
+        "operationId": "conceptHistory",
+        "x-demoStatus": "core",
+        "parameters": [
+          {
+            "name": "conceptId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "84114007"
+          },
+          {
+            "name": "languageCode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "en"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Concept release snapshots.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "ok": true,
+                  "pattern": "concept-history",
+                  "conceptId": "84114007",
+                  "history": [
+                    {
+                      "releaseId": "20260601",
+                      "effectiveTime": "20020131",
+                      "active": true,
+                      "preferredTerm": "Heart failure"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/nlp-map": {
+      "post": {
+        "tags": [
+          "Grounding"
+        ],
+        "summary": "Ground a clinical note to candidate SNOMED concepts",
+        "description": "Extracts clinical mentions from a note, searches bounded SNOMED candidates, and returns explainable candidate mappings for review.",
+        "operationId": "nlpMap",
+        "x-demoStatus": "core",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NlpMapRequest"
+              },
+              "example": {
+                "text": "Patient with chronic systolic heart failure and type 2 diabetes. PCI performed. Aspirin prescribed.",
+                "languageCode": "en"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Extracted mentions and candidate SNOMED concepts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "ok": true,
+                  "pattern": "nlp-map",
+                  "languageCode": "en",
+                  "mentions": [
+                    {
+                      "text": "chronic systolic heart failure",
+                      "section": "history",
+                      "candidates": [
+                        {
+                          "conceptId": "88805009",
+                          "displayTerm": "Chronic systolic heart failure"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/llm-ground": {
+      "post": {
+        "tags": [
+          "Grounding"
+        ],
+        "summary": "Use an LLM to choose among bounded grounding candidates",
+        "description": "Optional second-stage grounding endpoint. It does not assign free-text codes directly; it can only choose among candidates already retrieved from SNOMED search.",
+        "operationId": "llmGround",
+        "x-demoStatus": "optional",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mentions"
+                ],
+                "properties": {
+                  "mentions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  },
+                  "languageCode": {
+                    "type": "string",
+                    "default": "en"
+                  }
+                }
+              },
+              "example": {
+                "languageCode": "en",
+                "mentions": [
+                  {
+                    "text": "heart failure",
+                    "candidates": [
+                      {
+                        "conceptId": "84114007",
+                        "displayTerm": "Heart failure"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "LLM candidate selection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "LLM grounding disabled or not configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/coding-confirm": {
+      "post": {
+        "tags": [
+          "Grounding"
+        ],
+        "summary": "Persist reviewer-confirmed codings",
+        "description": "Stores reviewed grounding results in the grounded notes collection and enriches selected concepts with ancestor ids for later corpus queries.",
+        "operationId": "codingConfirm",
+        "x-demoStatus": "core",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodingConfirmRequest"
+              },
+              "example": {
+                "text": "Patient with heart failure.",
+                "languageCode": "en",
+                "codings": [
+                  {
+                    "mention": "heart failure",
+                    "conceptId": "84114007",
+                    "displayTerm": "Heart failure",
+                    "semanticTag": "disorder",
+                    "accepted": true
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved coding document metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "ok": true,
+                  "pattern": "coding-confirm",
+                  "collection": "grounded_notes",
+                  "insertedId": "65f000000000000000000000",
+                  "savedCodings": 1
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/grounded-corpus": {
+      "post": {
+        "tags": [
+          "Grounding"
+        ],
+        "summary": "Query the grounded-note corpus by SNOMED concept",
+        "description": "Demo payoff endpoint over grounded notes. It is not a FHIR patient cohort service; it returns notes whose accepted codings match a concept or one of its descendants.",
+        "operationId": "groundedCorpus",
+        "x-demoStatus": "demo",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "conceptId"
+                ],
+                "properties": {
+                  "conceptId": {
+                    "type": "string"
+                  },
+                  "includeDescendants": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "default": 20,
+                    "minimum": 1,
+                    "maximum": 100
+                  }
+                }
+              },
+              "example": {
+                "conceptId": "84114007",
+                "includeDescendants": true,
+                "limit": 10
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Matching grounded notes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "ok": true,
+                  "pattern": "grounded-corpus",
+                  "conceptId": "84114007",
+                  "matchCount": 4,
+                  "totalCount": 24,
+                  "sample": []
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/explorer-feedback": {
+      "post": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Record navigator usage telemetry",
+        "description": "Internal demo endpoint used by the UI to record search, selection, feedback, and workflow-handoff events in snomed-usage-events.",
+        "operationId": "explorerFeedback",
+        "x-demoStatus": "internal",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "eventType"
+                ],
+                "properties": {
+                  "eventType": {
+                    "type": "string",
+                    "enum": [
+                      "explorer.search.submitted",
+                      "explorer.result.selected",
+                      "explorer.feedback.submitted",
+                      "explorer.workflow.handoff"
+                    ]
+                  },
+                  "query": {
+                    "type": "string"
+                  },
+                  "conceptId": {
+                    "type": "string"
+                  },
+                  "languageCode": {
+                    "type": "string"
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                },
+                "additionalProperties": true
+              },
+              "example": {
+                "eventType": "explorer.search.submitted",
+                "query": "heart failure",
+                "languageCode": "en",
+                "resultCount": 10
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Telemetry event accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "ok": true,
+                  "pattern": "explorer-feedback",
+                  "eventType": "explorer.search.submitted"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/readiness": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Check data model and index readiness",
+        "description": "Validates source collection shape, search projection coverage, MongoDB Search/Vector indexes, release metadata, and hardening expectations.",
+        "operationId": "readiness",
+        "x-demoStatus": "diagnostic",
+        "responses": {
+          "200": {
+            "description": "Readiness report.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "ok": true,
+                  "checks": [
+                    {
+                      "name": "source collection reachable",
+                      "ok": true
+                    },
+                    {
+                      "name": "term search projection populated",
+                      "ok": true
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/release-diff": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Check SNOMED release diff readiness",
+        "description": "Reports loaded releaseIds and, when at least two releases are present, compares concept membership and key metadata between releases.",
+        "operationId": "releaseDiff",
+        "x-demoStatus": "diagnostic",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Older releaseId. Defaults to the previous loaded release."
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Newer releaseId. Defaults to the latest loaded release."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Release lifecycle readiness or release diff summary.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "ok": true,
+                  "pattern": "release-diff",
+                  "ready": false,
+                  "releases": [
+                    "20260601"
+                  ],
+                  "message": "Release diff requires at least two loaded releaseId values in the canonical SNOMED collection."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/benchmark": {
+      "post": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Run the grounding benchmark pack",
+        "description": "Runs configured grounding examples against the current extraction and search stack. This is a demo evaluation endpoint, not a clinical production API.",
+        "operationId": "benchmark",
+        "x-demoStatus": "diagnostic",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "example": {
+                "languageCode": "en"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Benchmark summary.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "ok": true,
+                  "pattern": "benchmark",
+                  "summary": {
+                    "notes": 6,
+                    "accuracy": 0.86
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Check API and MongoDB connectivity",
+        "operationId": "health",
+        "x-demoStatus": "diagnostic",
+        "responses": {
+          "200": {
+            "description": "Health payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "ok": true,
+                  "database": "terminology"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/ping": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Lightweight liveness check",
+        "operationId": "ping",
+        "x-demoStatus": "diagnostic",
+        "responses": {
+          "200": {
+            "description": "Liveness payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "ok": true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid request.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "ok": false,
+              "error": "query is required"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "ok": false,
+              "error": "Concept not found"
+            }
+          }
+        }
+      },
+      "ServerError": {
+        "description": "Server error.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "ok": false,
+              "error": "Operation failed"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "ok",
+          "error"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": false
+          },
+          "error": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "latencyMs": {
+            "type": "number"
+          }
+        },
+        "additionalProperties": true
+      },
+      "ConceptMatch": {
+        "type": "object",
+        "properties": {
+          "conceptId": {
+            "type": "string"
+          },
+          "descriptionId": {
+            "type": "string"
+          },
+          "displayTerm": {
+            "type": "string"
+          },
+          "preferredTerm": {
+            "type": "string"
+          },
+          "fsn": {
+            "type": "string"
+          },
+          "semanticTag": {
+            "type": "string"
+          },
+          "languageCode": {
+            "type": "string"
+          },
+          "preferred": {
+            "type": "boolean"
+          },
+          "score": {
+            "type": "number"
+          }
+        },
+        "additionalProperties": true
+      },
+      "NavigatorSearchRequest": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "languageCode": {
+            "type": "string",
+            "default": "en"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "lexical",
+              "vector",
+              "hybrid"
+            ],
+            "default": "lexical"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 20,
+            "minimum": 1,
+            "maximum": 100
+          },
+          "areaConceptId": {
+            "type": "string",
+            "description": "Optional concept id used as descendant scope."
+          },
+          "ecl": {
+            "type": "string",
+            "description": "Optional ECL scope expression."
+          },
+          "releaseId": {
+            "type": "string",
+            "description": "Optional release id override."
+          },
+          "forceScopeRefresh": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "NavigatorSuggestRequest": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "languageCode": {
+            "type": "string",
+            "default": "en"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 50
+          },
+          "areaConceptId": {
+            "type": "string"
+          },
+          "ecl": {
+            "type": "string"
+          },
+          "releaseId": {
+            "type": "string"
+          }
+        }
+      },
+      "SearchResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "pattern": {
+            "type": "string"
+          },
+          "collection": {
+            "type": "string"
+          },
+          "releaseId": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "queryPlan": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "stats": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConceptMatch"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "EclRequest": {
+        "type": "object",
+        "required": [
+          "expr"
+        ],
+        "properties": {
+          "expr": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "validate",
+              "expand"
+            ],
+            "default": "validate"
+          },
+          "languageCode": {
+            "type": "string",
+            "default": "en"
+          },
+          "releaseId": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 25,
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "forceScopeRefresh": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "EclResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "pattern": {
+            "type": "string"
+          },
+          "expr": {
+            "type": "string"
+          },
+          "ast": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "scope": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "conceptIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "concepts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConceptMatch"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "HierarchyRequest": {
+        "type": "object",
+        "required": [
+          "conceptId"
+        ],
+        "properties": {
+          "conceptId": {
+            "type": "string"
+          },
+          "languageCode": {
+            "type": "string",
+            "default": "en"
+          },
+          "releaseId": {
+            "type": "string"
+          }
+        }
+      },
+      "NlpMapRequest": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "languageCode": {
+            "type": "string",
+            "default": "en"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "searchTimeoutMs": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": true
+      },
+      "CodingConfirmRequest": {
+        "type": "object",
+        "required": [
+          "text",
+          "codings"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "languageCode": {
+            "type": "string",
+            "default": "en"
+          },
+          "tenantId": {
+            "type": "string",
+            "default": "demo-hospital"
+          },
+          "codings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "conceptId"
+              ],
+              "properties": {
+                "mention": {
+                  "type": "string"
+                },
+                "conceptId": {
+                  "type": "string"
+                },
+                "displayTerm": {
+                  "type": "string"
+                },
+                "semanticTag": {
+                  "type": "string"
+                },
+                "accepted": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

@@ -1,0 +1,779 @@
+/* ================================================================
+   DESIGN SYSTEM — Professional Light Theme
+   Inspired by MongoDB product design
+   ================================================================ */
+:root {
+  --bg: #f9fbfa;
+  --bg-sidebar: #ffffff;
+  --card: #ffffff;
+  --ink: #1C2D38;
+  --ink-secondary: #5C6C75;
+  --ink-muted: #889397;
+  --line: #E8EDEE;
+  --line-hover: #C7D0D4;
+
+  --font-sans: "Euclid Circular A", "Euclid Circular B", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: "MongoDB Value Serif", Georgia, serif;
+  --font-mono: "SF Mono", "SFMono-Regular", "JetBrains Mono", Menlo, monospace;
+
+  /* Single accent — MongoDB green */
+  --green: #00684A;
+  --green-dark: #004D38;
+  --green-light: #00ED64;
+  --green-bg: #E3FCF2;
+  --green-border: #B8F0D8;
+  --green-hover: #E8FAF0;
+
+  /* Semantic — used sparingly */
+  --blue: #016BF8;
+  --blue-bg: #E1F0FF;
+  --blue-border: #B3D4FC;
+  --red: #CF4747;
+  --red-bg: #FFF1F0;
+  --red-border: #FCCAC8;
+  --yellow: #FFC010;
+  --yellow-bg: #FFF8E5;
+  --yellow-border: #FFE57A;
+  --gray-100: #F9FBFA;
+  --gray-200: #F0F3F2;
+  --gray-300: #E8EDEE;
+  --gray-400: #C7D0D4;
+  --gray-500: #889397;
+  --gray-600: #5C6C75;
+  --gray-700: #3D4F58;
+  --gray-800: #1C2D38;
+
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.06), 0 4px 6px rgba(0,0,0,0.04);
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --transition: 150ms ease;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+code, pre { font-family: var(--font-mono); }
+
+::selection {
+  background: var(--green-bg);
+  color: var(--green-dark);
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gray-400); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gray-500); }
+
+/* ================================================================
+   APP SHELL — Sidebar + Main
+   ================================================================ */
+.page-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 232px 1fr;
+  grid-template-rows: auto 1fr;
+}
+
+/* ================================================================
+   SIDEBAR — MongoDB Compass dark theme
+   ================================================================ */
+.appSidebar {
+  grid-row: 1 / -1;
+  background: #001E2B;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
+  z-index: 10;
+  scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+
+.appSidebar::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+}
+
+.sidebarBrand {
+  padding: 14px 16px 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+}
+
+.sidebarMark {
+  width: 18px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: transparent;
+}
+
+.sidebarMark img {
+  width: 18px;
+  height: 38px;
+  object-fit: contain;
+  filter: none;
+}
+
+.sidebarBrandText {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.sidebarBrandText small {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #00ED64;
+  line-height: 1.2;
+}
+
+.sidebarBrandText strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebarSection {
+  padding: 14px 10px 6px;
+}
+
+.sidebarSectionLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.38);
+  padding: 0 8px;
+  margin-bottom: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.sidebarNav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sidebarItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  text-align: left;
+  width: 100%;
+  font-family: var(--font-sans);
+}
+
+.sidebarItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.sidebarItemActive {
+  background: rgba(0, 237, 100, 0.1);
+  color: #00ED64;
+  font-weight: 600;
+}
+
+.sidebarItemActive:hover {
+  background: rgba(0, 237, 100, 0.14);
+  color: #00ED64;
+}
+
+.sidebarItemIcon {
+  width: 15px;
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.75;
+}
+
+.sidebarItemActive .sidebarItemIcon {
+  opacity: 1;
+}
+
+.sidebarItemIcon svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.sidebarStats {
+  margin-top: auto;
+  padding: 12px 16px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: grid;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.sidebarStat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11.5px;
+}
+
+.sidebarStat span:first-child {
+  color: rgba(255, 255, 255, 0.32);
+}
+
+.sidebarStat span:last-child {
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ================================================================
+   TOP HEADER BAR
+   ================================================================ */
+.appHeader {
+  grid-column: 2;
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 9;
+  min-height: 52px;
+}
+
+.appHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.appHeaderTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.appHeaderSub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.appHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.appPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--green-bg);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.appHeaderLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line-bright);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink-secondary);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+  transition: all 150ms ease;
+}
+
+.appHeaderLink:hover {
+  border-color: var(--accent-muted);
+  color: var(--ink);
+}
+
+/* ================================================================
+   MAIN CONTENT AREA
+   ================================================================ */
+.appMain {
+  grid-column: 2;
+  padding: 12px 16px 16px;
+  min-width: 0;
+  overflow-x: hidden;
+  min-height: calc(100vh - 52px);
+}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+@media (max-width: 900px) {
+  .page-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .appSidebar {
+    position: fixed;
+    left: -240px;
+    width: 240px;
+    transition: left 200ms ease;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .appSidebar.open {
+    left: 0;
+  }
+
+  .appMain {
+    grid-column: 1;
+    padding: 16px;
+  }
+
+  .appHeader {
+    grid-column: 1;
+  }
+}
+
+/* ================================================================
+   DOCS
+   ================================================================ */
+.docsShell {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 70% 50% at 20% 0%, rgba(0, 237, 100, 0.06) 0%, transparent 55%),
+    linear-gradient(180deg, #f8fbfa 0%, #f3f7f6 100%);
+  color: #102535;
+}
+
+.docsHeader {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  backdrop-filter: blur(16px);
+  background: rgba(248, 251, 250, 0.92);
+  border-bottom: 1px solid #d9e2e6;
+}
+
+.docsHeaderInner {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.docsBrand {
+  display: grid;
+  gap: 0.24rem;
+}
+
+.docsEyebrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #00684A;
+}
+
+.docsTitle {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.4rem;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: #102535;
+}
+
+.docsSubtext {
+  margin: 0;
+  color: #58697a;
+  font-size: 0.88rem;
+}
+
+.docsHeaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.docsLinkButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0.62rem 0.92rem;
+  border-radius: 999px;
+  border: 1px solid #0c7756;
+  background: #0f8f59;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+.docsLinkButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 143, 89, 0.18);
+}
+
+.docsLinkMuted {
+  border-color: #cad6dc;
+  background: #ffffff;
+  color: #2d4758;
+}
+
+.docsLinkMuted:hover {
+  box-shadow: 0 8px 18px rgba(26, 39, 49, 0.08);
+}
+
+.docsIntroBand {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.docsIntroCard {
+  display: grid;
+  gap: 0.22rem;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  border: 1px solid #d9e3e7;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 10px 24px rgba(16, 37, 53, 0.05);
+}
+
+.docsIntroCard strong {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #00684A;
+}
+
+.docsIntroCard span {
+  color: #526271;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.docsFrame {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 1.5rem;
+}
+
+.docsScopeBand {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.docsSection {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.docsSectionSplit {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.docsSectionHead {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.docsSectionEyebrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #00684A;
+}
+
+.docsSectionTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.1;
+  color: #102535;
+}
+
+.docsCardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.docsCardGridTight {
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+}
+
+.docsBlockCard {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  border: 1px solid #d9e3e7;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 24px rgba(16, 37, 53, 0.05);
+}
+
+.docsBlockCardAccent {
+  background: linear-gradient(180deg, rgba(232, 250, 240, 0.95), rgba(255, 255, 255, 0.96));
+  border-color: #bde5d2;
+}
+
+.docsBlockCard strong {
+  font-size: 0.92rem;
+  color: #102535;
+}
+
+.docsBlockCard p {
+  margin: 0;
+  color: #526271;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.docsMiniList {
+  margin: 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.28rem;
+  color: #526271;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 900px) {
+  .docsIntroBand {
+    grid-template-columns: 1fr;
+  }
+
+  .docsSectionSplit,
+  .docsCardGrid,
+  .docsCardGridTight {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================================================================
+   HEADER BREADCRUMB
+   ================================================================ */
+.appBreadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.appBreadcrumbRoot {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.appBreadcrumbSep {
+  font-size: 14px;
+  color: var(--ink-muted);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.appBreadcrumbCurrent {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.appBreadcrumbSub {
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 540px;
+}
+
+/* ================================================================
+   LIVE STATUS CHIP (header right)
+   ================================================================ */
+.appStatusLive {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(0, 237, 100, 0.08);
+  border: 1px solid rgba(0, 237, 100, 0.22);
+  font-size: 11px;
+  font-weight: 700;
+  color: #008A45;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.appStatusLiveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00ED64;
+  box-shadow: 0 0 5px rgba(0, 237, 100, 0.55);
+  flex-shrink: 0;
+  animation: livePulse 2.8s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* ================================================================
+   SIDEBAR LIVE INDICATOR ROW
+   ================================================================ */
+.sidebarLiveRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #00ED64;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.sidebarLiveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00ED64;
+  box-shadow: 0 0 5px rgba(0, 237, 100, 0.65);
+  flex-shrink: 0;
+  animation: livePulse 2.8s ease-in-out infinite;
+}
+
+/* ================================================================
+   TOP-NAV OVERRIDE — 3-tab horizontal nav (gains horizontal space)
+   Converts the left sidebar into a compact top bar. Appended last so
+   these rules win over the sidebar layout above.
+   ================================================================ */
+.page-shell {
+  display: flex;
+  flex-direction: column;
+  grid-template-columns: none;
+  grid-template-rows: none;
+}
+.appSidebar {
+  grid-row: auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  height: auto;
+  min-height: 56px;
+  padding: 8px 20px;
+  border-right: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: visible;
+}
+.appSidebar .sidebarBrand {
+  padding: 0;
+  margin: 0;
+  border: none;
+  flex-shrink: 0;
+}
+.appSidebar .sidebarSection {
+  flex-direction: row;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.appSidebar .sidebarSectionLabel { display: none; }
+.appSidebar .sidebarNav {
+  flex-direction: row;
+  gap: 6px;
+}
+.appSidebar .sidebarItem {
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+.appSidebar .sidebarStats {
+  margin-left: auto;
+  margin-top: 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  padding: 0;
+  border: none;
+}
+.appSidebar .sidebarStats .sidebarStat { display: none; }
+.appHeader { width: 100%; }
+.appMain { width: 100%; }
