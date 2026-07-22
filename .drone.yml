@@ -1,0 +1,109 @@
+---
+kind: pipeline
+type: kubernetes
+name: staging
+
+trigger:
+  branch:
+    - staging
+
+# replace <your-demo-name> with your demo name for eg.: financial-news-vector-search
+steps:
+  - name: publish-staging
+    image: plugins/kaniko-ecr
+    settings:
+      create_repository: true
+      registry: 795250896452.dkr.ecr.us-east-1.amazonaws.com ## keep same for all demos < - aws ecr registry used to store docker image
+      repo: industrysolutions/snomed-mongodb ## NEED TO CHANGE - based on your demo name for eg.: financial-news-vector-search
+      tags:
+        - git-${DRONE_COMMIT_SHA:0:7}
+        - latest
+      dockerfile: Dockerfile
+      access_key:
+        from_secret: ecr_access_key
+      secret_key:
+        from_secret: ecr_secret_key
+    when:
+      event:
+        - push
+
+  - name: deploy-frontend-staging
+    image: public.ecr.aws/kanopy/drone-helm:v3
+    settings:
+      chart: mongodb/web-app
+      chart_version: 4.30.0
+      add_repos: [mongodb=https://10gen.github.io/helm-charts]
+      namespace: industrysolutions
+      release: snomed-mongodb
+      values:
+        - "image.tag=git-${DRONE_COMMIT_SHA:0:7}"
+        - "image.repository=795250896452.dkr.ecr.us-east-1.amazonaws.com/industrysolutions/snomed-mongodb" ## NEED TO CHANGE replace <your-demo-name>
+        - "ingress.enabled=true"
+        - "ingress.hosts[0]=snomed-mongodb.industrysolutions.staging.corp.mongodb.com" ## NEED TO CHANGE replace <your-demo-name> with your demo name for eg.: financial-news-vector-search
+        - "mesh.enabled=true"
+        # Frontend resources (reduced defaults for demos - increase if OOMKilled)
+        - "resources.limits.cpu=500m"
+        - "resources.limits.memory=512Mi"
+        - "resources.requests.cpu=100m"
+        - "resources.requests.memory=256Mi"
+      api_server: https://api.staging.corp.mongodb.com
+      kubernetes_token:
+        from_secret: staging_kubernetes_token
+      values_files: ["environment/staging.yaml"]
+    when:
+      event:
+        - push
+
+---
+kind: pipeline
+type: kubernetes
+name: production
+
+trigger:
+  branch:
+    - main
+
+steps:
+  - name: publish-prod
+    image: plugins/kaniko-ecr
+    settings:
+      create_repository: true
+      registry: 795250896452.dkr.ecr.us-east-1.amazonaws.com # keep same for all demos < - aws ecr registry used to store docker image
+      repo: industrysolutions/snomed-mongodb-prod ## NEED TO CHANGE - based on your demo name for eg.: financial-news-vector-search-backend-prod
+      tags:
+        - git-${DRONE_COMMIT_SHA:0:7}-prod
+        - prod-latest
+      dockerfile: Dockerfile
+      access_key:
+        from_secret: ecr_access_key
+      secret_key:
+        from_secret: ecr_secret_key
+    when:
+      event:
+        - push
+
+  - name: deploy-frontend-production
+    image: public.ecr.aws/kanopy/drone-helm:v3
+    settings:
+      chart: mongodb/web-app
+      chart_version: 4.30.0
+      add_repos: [mongodb=https://10gen.github.io/helm-charts]
+      namespace: industrysolutions
+      release: snomed-mongodb-prod
+      values:
+        - "image.tag=git-${DRONE_COMMIT_SHA:0:7}-prod"
+        - "image.repository=795250896452.dkr.ecr.us-east-1.amazonaws.com/industrysolutions/snomed-mongodb-prod"
+        - "ingress.enabled=true"
+        - "ingress.hosts[0]=snomed-mongodb.industrysolutions.prod.corp.mongodb.com"
+        - "mesh.enabled=true"
+        - "resources.limits.cpu=500m"
+        - "resources.limits.memory=512Mi"
+        - "resources.requests.cpu=150m"
+        - "resources.requests.memory=256Mi"
+      api_server: https://api.prod.corp.mongodb.com
+      kubernetes_token:
+        from_secret: production_kubernetes_token
+      values_files: ["environment/production.yaml"]
+    when:
+      event:
+        - push
