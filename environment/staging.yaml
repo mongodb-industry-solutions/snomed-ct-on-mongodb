@@ -1,0 +1,37 @@
+# Kanopy security and ownership (requires web-app chart v4.30.0+)
+security:
+  dataClassification: "Internal"
+  dataDesignation: ["MI"]
+
+ownership:
+  driEmail: francesc.mateu@mongodb.com
+
+env:
+  NODE_ENV: staging
+  # AWS region for IRSA (no credentials needed)
+  AWS_REGION: us-east-1
+  # Backend API URL for frontend to connect to backend health check - get <service-name> using kubectl get services
+  COLLECTION_NAME: test-collection
+  ENABLE_LLM_GROUNDING: true
+  LLM_GROUNDING_MODEL: gpt-5.5
+  LLM_API_STYLE: responses
+  LLM_GROUNDING_MODELS: gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.4-nano,gpt-5.1,gpt-5,gpt-5-mini,gpt-5-nano,gpt-4.1-mini,claude-opus-4-8,claude-sonnet-5,claude-haiku-4-5,claude-opus-4-5,Mistral-Large-3,mistral-small-2503,DeepSeek-V3.2,DeepSeek-V4-Flash,grok-4.3,grok-4-1-fast-reasoning,Kimi-K2-Thinking
+  NEXT_PUBLIC_LLM_GROUNDING_MODELS: gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.4-nano,gpt-5.1,gpt-5,gpt-5-mini,gpt-5-nano,gpt-4.1-mini,claude-opus-4-8,claude-sonnet-5,claude-haiku-4-5,claude-opus-4-5,Mistral-Large-3,mistral-small-2503,DeepSeek-V3.2,DeepSeek-V4-Flash,grok-4.3,grok-4-1-fast-reasoning,Kimi-K2-Thinking
+  LLM_LOG_IO: true
+
+## Single Pod Containers
+envSecrets:
+  # MongoDB Configuration
+  MONGODB_URI: snomed-secrets
+  MONGODB_DB: snomed-secrets
+  VOYAGE_API_KEY: snomed-secrets
+  LLM_BASE_URL: snomed-secrets
+  LLM_API_KEY: snomed-secrets
+  LLM_AUTH_HEADER: snomed-secrets
+
+# Add IRSA configuration here, role here gives access to bedrock, s3, aws secrets manager
+serviceAccount:
+  enabled: true
+  irsa:
+    accountId: "275662791714"
+    roleName: "kanopy-staging-cicd-irsa"

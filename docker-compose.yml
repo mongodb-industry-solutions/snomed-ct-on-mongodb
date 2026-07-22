@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: snomed-ct-on-mongodb
+    container_name: snomed-ct
+    ports:
+      - "8080:8080"
+    # Load secrets/config from .env at runtime (never baked into the image).
+    env_file:
+      - .env
+    # Pin the container port so it always matches the published mapping above,
+    # even if .env sets PORT to something else (e.g. 3015 for local dev).
+    environment:
+      PORT: "8080"
+      HOSTNAME: "0.0.0.0"
+      NODE_ENV: "production"
+    restart: unless-stopped
