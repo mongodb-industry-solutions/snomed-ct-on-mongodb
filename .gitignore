@@ -1,3 +1,30 @@
+# Kanopy
+knowledge_base_kanopy/
+
+# Security checks
+security_check.sh
+SECURITY_CHECK_README.md
+
+# Git hooks (included in template, ignored in derived repos)
+setup-hooks.sh
+.githooks/
+
+# Kanopy
+
+./KANOPY_DEPLOYMENT_README.md
+.drone-multicontainer-pods.yml
+.drone-seperate-pods.yml
+
+# claude
+**/.claude
+
+# task-def.json
+**/task-def.json
+
+# Config
+**/config.yml
+**/config.yaml
+
 # OS / editor cruft
 .DS_Store
 Thumbs.db
