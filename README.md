@@ -173,6 +173,7 @@ Operations:
 - `GET /api/release-diff`
 - `POST /api/benchmark`
 - `GET /api/health`
+- `GET /api/stats`
 - `GET /api/ping`
 - `POST /api/explorer-feedback`
 

@@ -1224,6 +1224,8 @@ export default function DemoWorkbench() {
   const [conceptHistoryCall, setConceptHistoryCall] = useState(EMPTY_CALL);
   const [graphCall, setGraphCall] = useState(EMPTY_CALL);
   const [readinessCall, setReadinessCall] = useState(EMPTY_CALL);
+  const readinessInFlightRef = useRef(false);
+  const [statsCall, setStatsCall] = useState(EMPTY_CALL);
   const [releaseDiffCall, setReleaseDiffCall] = useState(EMPTY_CALL);
 
   const [assistantPrincipalDx, setAssistantPrincipalDx] = useState(null);
@@ -1651,7 +1653,28 @@ export default function DemoWorkbench() {
       }
     });
   };
+  // Sidebar counters. Cheap O(1) metadata reads, so this is safe to call on mount —
+  // unlike readiness, which is a diagnostic and loads on demand.
+  const runStats = async () => {
+    try {
+      const payload = await getJson("/api/stats");
+      setStatsCall({ loading: false, error: "", response: payload });
+    } catch (error) {
+      setStatsCall({
+        loading: false,
+        error: error instanceof Error ? error.message : String(error),
+        response: null
+      });
+    }
+  };
+
   const runReadiness = async () => {
+    // Two effects used to race into this on mount, so a single page load could
+    // issue two readiness calls. Guard on a ref rather than the loading state,
+    // which is not yet visible to an effect running in the same commit.
+    if (readinessInFlightRef.current) return;
+    readinessInFlightRef.current = true;
+
     setReadinessCall((current) => ({ ...current, loading: true, error: "" }));
     try {
       const payload = await getJson("/api/readiness");
@@ -1662,6 +1685,8 @@ export default function DemoWorkbench() {
         error: error instanceof Error ? error.message : String(error),
         response: null
       });
+    } finally {
+      readinessInFlightRef.current = false;
     }
   };
 
@@ -1689,7 +1714,10 @@ export default function DemoWorkbench() {
 
   useEffect(() => {
     explorerSessionRef.current = makeExplorerSession();
-    runReadiness();
+    runStats();
+    // Readiness is deliberately not fetched here. It is a diagnostic whose every
+    // consumer lives in MODEL STUDIO, and the tab effect below loads it on demand.
+    // Fetching on mount meant a full collection scan per page load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1725,11 +1753,17 @@ export default function DemoWorkbench() {
   }, [activeTab, appendixOpen]);
 
   useEffect(() => {
-    if ((activeTab === "model" || activeTab === "foundations") && !readinessCall.response && !readinessCall.loading) {
+    // MODEL STUDIO is the only place readiness is rendered, so only fetch when it
+    // is actually on screen. The default tab is "foundations" with the "overview"
+    // subtab, which renders neither the readiness panel nor the live stats.
+    const modelStudioOpen =
+      activeTab === "model" || (activeTab === "foundations" && overviewSub === "model");
+
+    if (modelStudioOpen && !readinessCall.response && !readinessCall.loading) {
       runReadiness();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [activeTab, overviewSub]);
 
   useEffect(() => {
     if (!explorerDeveloperMode && explorerInspectorTab === "raw") {
@@ -1771,7 +1805,7 @@ export default function DemoWorkbench() {
   const readiness = readinessCall.response;
 
   const activeMeta = TAB_META[activeTab];
-  const readinessSummary = readiness?.counts || {};
+  const statsSummary = statsCall.response?.counts || {};
   const activeApiExamples = buildWorkflowApiExamples({
     activeTab,
     conceptIdInput,
@@ -1845,11 +1879,11 @@ export default function DemoWorkbench() {
           </div>
           <div className="sidebarStat">
             <span>Concepts</span>
-            <span>{readinessSummary.sourceDocs ?? "—"}</span>
+            <span>{statsSummary.sourceCount?.toLocaleString() ?? "—"}</span>
           </div>
           <div className="sidebarStat">
             <span>Search index</span>
-            <span>{readinessSummary.projectionDocs ?? "—"}</span>
+            <span>{statsSummary.projectionCount?.toLocaleString() ?? "—"}</span>
           </div>
         </div>
       </nav>
