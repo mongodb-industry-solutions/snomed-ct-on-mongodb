@@ -1,6 +1,7 @@
 import { getCollection } from "@/lib/mongo";
 import { getMongoConfig, getSearchConfig, getSemanticsConfig } from "@/lib/config";
 import { getSemanticScopeCacheStats } from "@/lib/semantic-scope";
+import { probeProjectionModel, probeSourceModel } from "@/lib/model-probe";
 import { buildMongoErrorPayload } from "@/lib/mongo-error";
 import { elapsedMs, fail, ok } from "@/lib/http";
 
@@ -69,28 +70,6 @@ async function safeEstimatedDocumentCount(collection) {
   }
 }
 
-async function safeCountDocuments(collection, filter) {
-  try {
-    return await collection.countDocuments(filter);
-  } catch (error) {
-    if (isNamespaceMissingError(error)) {
-      return 0;
-    }
-    throw error;
-  }
-}
-
-async function safeFindOneExists(collection, filter) {
-  try {
-    return await collection.findOne(filter, { projection: { _id: 1 } }).then(Boolean);
-  } catch (error) {
-    if (isNamespaceMissingError(error)) {
-      return false;
-    }
-    throw error;
-  }
-}
-
 async function safeListBtreeIndexes(collection) {
   try {
     return await collection.indexes();
@@ -124,40 +103,37 @@ export async function GET() {
       projectionCount,
       sourceBtreeIndexes,
       projectionBtreeIndexes,
-      vectorDocs,
-      autoEmbedDocs,
       usageEventDocs,
+      sourceModel,
+      projectionModel
+    ] = await Promise.all([
+      safeEstimatedDocumentCount(source),
+      safeEstimatedDocumentCount(projection),
+      safeListBtreeIndexes(source),
+      safeListBtreeIndexes(projection),
+      safeEstimatedDocumentCount(usageEvents),
+      probeSourceModel(source),
+      probeProjectionModel(projection, { manualVectorPath, vectorPath })
+    ]);
+
+    const {
       hasReleaseId,
       hasEffectiveTime,
       hasReleaseDate,
-      hasProjectionReleaseDate,
-      hasSemanticTagKey,
       hasStoredDescendantClosure,
       hasNumericAncestorIds,
       hasNumericParentIds,
       hasNumericChildIds,
       hasNumericDescriptionConceptIds,
       hasRelationshipAttributeKeys
-    ] = await Promise.all([
-      safeEstimatedDocumentCount(source),
-      safeEstimatedDocumentCount(projection),
-      safeListBtreeIndexes(source),
-      safeListBtreeIndexes(projection),
-      safeCountDocuments(projection, { [manualVectorPath]: { $exists: true } }),
-      safeCountDocuments(projection, { [vectorPath]: { $exists: true, $type: "string", $ne: "" } }),
-      safeEstimatedDocumentCount(usageEvents),
-      safeFindOneExists(source, { releaseId: { $exists: true } }),
-      safeFindOneExists(source, { effectiveTime: { $exists: true } }),
-      safeFindOneExists(source, { releaseDate: { $exists: true } }),
-      safeFindOneExists(projection, { releaseDate: { $exists: true } }),
-      safeFindOneExists(projection, { semanticTagKey: { $exists: true } }),
-      safeFindOneExists(source, { inferredDescendantIds: { $exists: true } }),
-      safeFindOneExists(source, { inferredAncestorIds: { $type: "number" } }),
-      safeFindOneExists(source, { inferredParentIds: { $type: "number" } }),
-      safeFindOneExists(source, { inferredChildIds: { $type: "number" } }),
-      safeFindOneExists(source, { "descriptions.conceptId": { $type: "number" } }),
-      safeFindOneExists(source, { relationshipAttributeKeys: { $exists: true, $ne: [] } })
-    ]);
+    } = sourceModel;
+
+    const {
+      hasProjectionReleaseDate,
+      hasSemanticTagKey,
+      hasManualVectors,
+      hasAutoEmbedVectors
+    } = projectionModel;
 
     let searchIndexes = [];
     let searchIndexError = "";
@@ -185,7 +161,7 @@ export async function GET() {
     const semanticsScopeCache = getSemanticScopeCacheStats();
 
     const usesAutoEmbedding = String(vectorMode || "").toLowerCase() === "autoembed";
-    const vectorContentPresent = usesAutoEmbedding ? autoEmbedDocs > 0 : vectorDocs > 0;
+    const vectorContentPresent = usesAutoEmbedding ? hasAutoEmbedVectors : hasManualVectors;
     const vectorDefinitionMatchesMode = usesAutoEmbedding
       ? searchIndexHasField(rawVectorIndex, "autoEmbed", vectorPath)
       : searchIndexHasField(rawVectorIndex, "vector", vectorPath);
@@ -249,8 +225,6 @@ export async function GET() {
       counts: {
         sourceCount,
         projectionCount,
-        vectorDocs,
-        autoEmbedDocs,
         usageEventDocs
       },
       indexes: {
@@ -277,7 +251,9 @@ export async function GET() {
         hasNumericParentIds,
         hasNumericChildIds,
         hasNumericDescriptionConceptIds,
-        hasRelationshipAttributeKeys
+        hasRelationshipAttributeKeys,
+        hasManualVectors,
+        hasAutoEmbedVectors
       },
       caches: {
         semanticsScope: semanticsScopeCache
