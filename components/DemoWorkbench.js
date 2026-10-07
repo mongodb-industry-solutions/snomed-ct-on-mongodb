@@ -452,6 +452,11 @@ function StatPill({ label, value }) {
 }
 
 function ReadinessChip({ label, ok }) {
+  // null means the collection's migration state has not been recorded, which is
+  // a different answer from "no" \u2014 show it as unknown rather than as a failure.
+  if (ok === null || ok === undefined) {
+    return <Badge variant="lightgray">? {label} (unknown)</Badge>;
+  }
   return (
     <Badge variant={ok ? "green" : "yellow"}>
       {ok ? "\u2713" : "\u26A0"} {label}
@@ -2331,6 +2336,21 @@ export default function DemoWorkbench() {
                     <ReadinessChip label="Hardened model" ok={readiness.readiness.hardenedModelReady} />
                     <ReadinessChip label="Architecture ready" ok={readiness.readiness.architectureReady} />
                   </div>
+                )}
+
+                {readiness?.modelState && !readiness.modelState.source?.recorded && (
+                  <p style={{ margin: "8px 0 0", fontSize: 12.5, color: "var(--ink-secondary)" }}>
+                    Migration state has not been recorded for {readiness.modelState.source?.collection}, so the
+                    model checks read <strong>unknown</strong> rather than guessing. Run{" "}
+                    <code>npm run model:stamp-state</code> to record it.
+                  </p>
+                )}
+
+                {readiness?.modelState?.projection?.staleVectorPaths && (
+                  <p style={{ margin: "8px 0 0", fontSize: 12.5, color: "var(--ink-secondary)" }}>
+                    Vector field paths have changed since the state was recorded, so the vector checks read{" "}
+                    <strong>unknown</strong>. Re-run <code>npm run model:stamp-state</code>.
+                  </p>
                 )}
 
                 {readiness?.counts && (

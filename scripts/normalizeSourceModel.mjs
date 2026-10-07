@@ -1,5 +1,6 @@
 import "./loadEnv.mjs";
 import { MongoClient, ServerApiVersion } from "mongodb";
+import { stampModelState } from "../lib/model-state.js";
 
 function env(name, fallback = "") {
   const value = process.env[name];
@@ -115,6 +116,11 @@ async function run() {
 
   const dbName = env("MONGODB_DB", "terminology");
   const sourceCollectionName = env("MONGODB_COLLECTION", "snomed-irbd");
+  const projectionCollectionName = env("MONGODB_TERM_SEARCH_COLLECTION", "snomed-term-search");
+  const stateCollectionName = env("MONGODB_MODEL_STATE_COLLECTION", "snomed-model-state");
+  const releaseId = env("SNOMED_RELEASE_ID", env("RELEASE_ID_TARGET"));
+  const vectorPath = env("MONGODB_VECTOR_PATH", "embedText");
+  const manualVectorPath = env("MONGODB_MANUAL_VECTOR_PATH", "embedding_voyage_4_lite_256");
   const apply = envBoolean("NORMALIZE_APPLY", false);
 
   const client = new MongoClient(uri, {
@@ -253,6 +259,23 @@ async function run() {
       );
     } else {
       console.log("Dry-run only. Set NORMALIZE_APPLY=true to execute updateMany.");
+    }
+
+    // Re-record the collection's migration state so /api/readiness reports the
+    // shape this run just produced rather than the previous one. Skipped on a
+    // dry run, where nothing actually changed.
+    if (apply) {
+      console.log("[2b/3] Recording model state for /api/readiness");
+      const { sourceFacts, projectionFacts } = await stampModelState(db, {
+        sourceCollection: sourceCollectionName,
+        projectionCollection: projectionCollectionName,
+        stateCollection: stateCollectionName,
+        releaseId,
+        manualVectorPath,
+        vectorPath,
+        recordedBy: "scripts/normalizeSourceModel.mjs"
+      });
+      console.log(JSON.stringify({ source: sourceFacts, projection: projectionFacts }, null, 2));
     }
 
     console.log("[3/3] Sampling model after normalization logic");

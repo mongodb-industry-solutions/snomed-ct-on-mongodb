@@ -16,7 +16,8 @@
     "indexes:build": "node scripts/buildPlatformIndexes.mjs",
     "collections:retire": "node scripts/dropRetiredCollections.mjs",
     "releaseid:stamp": "node scripts/stampReleaseId.mjs",
-    "model:harden": "node scripts/normalizeSourceModel.mjs"
+    "model:harden": "node scripts/normalizeSourceModel.mjs",
+    "model:stamp-state": "node scripts/stampModelState.mjs"
   },
   "dependencies": {
     "@leafygreen-ui/badge": "^10.2.4",

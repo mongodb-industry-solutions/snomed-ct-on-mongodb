@@ -23,6 +23,7 @@ The default database and collections are:
 - `MONGODB_COLLECTION=snomed-irbd`
 - `MONGODB_TERM_SEARCH_COLLECTION=snomed-term-search`
 - `MONGODB_USAGE_EVENT_COLLECTION=snomed-usage-events`
+- `MONGODB_MODEL_STATE_COLLECTION=snomed-model-state`
 
 ## Optional Capabilities
 
@@ -93,11 +94,12 @@ npm run collections:retire -- --apply
 
 ## Retired Variables
 
-The public contract intentionally excludes older cohort, refset-authoring, binding, mapping, ancestor-index, and deployment variables. The current demo uses four collections:
+The public contract intentionally excludes older cohort, refset-authoring, binding, mapping, ancestor-index, and deployment variables. The current demo uses five collections:
 
 - `snomed-irbd`
 - `snomed-term-search`
 - `grounded_notes`
 - `snomed-usage-events`
+- `snomed-model-state`
 
 Keep new variables out of `.env.example` unless a live app route or supported script reads them.
