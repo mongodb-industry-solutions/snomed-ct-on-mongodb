@@ -1,5 +1,6 @@
 import "./loadEnv.mjs";
 import { MongoClient, ServerApiVersion } from "mongodb";
+import { PROJECTION_STATE_ID, invalidateModelState } from "../lib/model-state.js";
 
 // SNOMED model/metadata and non-clinical structural semantic tags to exclude from
 // the search projection (EN + ES surface forms). Kept in sync with the runtime
@@ -487,6 +488,7 @@ async function run() {
   const sourceCollectionName = env("MONGODB_COLLECTION", "snomed-irbd");
   const projectionCollectionName = env("MONGODB_TERM_SEARCH_COLLECTION", "snomed-term-search");
   const vectorPath = env("MONGODB_MANUAL_VECTOR_PATH", env("ATLAS_MANUAL_VECTOR_PATH", "embedding_voyage_4_lite_256"));
+  const stateCollectionName = env("MONGODB_MODEL_STATE_COLLECTION", "snomed-model-state");
 
   const projectionBuildEnabled = envBoolean("PROJECTION_BUILD_ENABLED", true);
   const projectionResetBeforeBuild = envBoolean("PROJECTION_RESET_BEFORE_BUILD", true);
@@ -541,6 +543,11 @@ async function run() {
     const db = client.db(dbName);
     const source = db.collection(sourceCollectionName);
     const projection = db.collection(projectionCollectionName);
+
+    // This run rewrites the term sidecar, which the recorded projection state
+    // describes. Invalidate up front so a failure part-way through cannot leave
+    // a record that still looks authoritative.
+    await invalidateModelState(db.collection(stateCollectionName), PROJECTION_STATE_ID);
 
     if (projectionBuildEnabled) {
       console.log(`[1/3] Building term-level search projection ${dbName}.${projectionCollectionName}`);

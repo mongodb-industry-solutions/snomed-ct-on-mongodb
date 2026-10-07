@@ -1,6 +1,6 @@
 import "./loadEnv.mjs";
 import { MongoClient, ServerApiVersion } from "mongodb";
-import { stampModelState } from "../lib/model-state.js";
+import { SOURCE_STATE_ID, invalidateModelState } from "../lib/model-state.js";
 
 function env(name, fallback = "") {
   const value = process.env[name];
@@ -116,11 +116,7 @@ async function run() {
 
   const dbName = env("MONGODB_DB", "terminology");
   const sourceCollectionName = env("MONGODB_COLLECTION", "snomed-irbd");
-  const projectionCollectionName = env("MONGODB_TERM_SEARCH_COLLECTION", "snomed-term-search");
   const stateCollectionName = env("MONGODB_MODEL_STATE_COLLECTION", "snomed-model-state");
-  const releaseId = env("SNOMED_RELEASE_ID", env("RELEASE_ID_TARGET"));
-  const vectorPath = env("MONGODB_VECTOR_PATH", "embedText");
-  const manualVectorPath = env("MONGODB_MANUAL_VECTOR_PATH", "embedding_voyage_4_lite_256");
   const apply = envBoolean("NORMALIZE_APPLY", false);
 
   const client = new MongoClient(uri, {
@@ -261,21 +257,15 @@ async function run() {
       console.log("Dry-run only. Set NORMALIZE_APPLY=true to execute updateMany.");
     }
 
-    // Re-record the collection's migration state so /api/readiness reports the
-    // shape this run just produced rather than the previous one. Skipped on a
-    // dry run, where nothing actually changed.
+    // This run changes fields the recorded state describes, so the record can no
+    // longer be trusted. Drop it rather than re-stamp here: the documented setup
+    // runs releaseid:stamp and terms:rebuild after this script, so a record
+    // written now would describe a shape they immediately invalidate. An absent
+    // record reads as unknown, which is visible; a stale one is not.
     if (apply) {
-      console.log("[2b/3] Recording model state for /api/readiness");
-      const { sourceFacts, projectionFacts } = await stampModelState(db, {
-        sourceCollection: sourceCollectionName,
-        projectionCollection: projectionCollectionName,
-        stateCollection: stateCollectionName,
-        releaseId,
-        manualVectorPath,
-        vectorPath,
-        recordedBy: "scripts/normalizeSourceModel.mjs"
-      });
-      console.log(JSON.stringify({ source: sourceFacts, projection: projectionFacts }, null, 2));
+      console.log("[2b/3] Invalidating recorded model state");
+      await invalidateModelState(db.collection(stateCollectionName), SOURCE_STATE_ID);
+      console.log("Run `npm run model:stamp-state` after the final migration step to re-record it.");
     }
 
     console.log("[3/3] Sampling model after normalization logic");

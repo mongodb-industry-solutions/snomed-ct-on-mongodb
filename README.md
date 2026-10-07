@@ -97,7 +97,10 @@ NORMALIZE_APPLY=true npm run model:harden
 RELEASE_ID_TARGET=20260601 RELEASE_ID_OVERWRITE=true npm run releaseid:stamp
 SNOMED_RELEASE_ID=20260601 TERM_PROJECTION_SCOPE=demo TERM_PROJECTION_REPLACE_RELEASE=true npm run terms:rebuild
 npm run indexes:build
+npm run model:stamp-state
 ```
+
+`npm run model:stamp-state` must run **last**. It records the collection's migration state in `snomed-model-state` so `/api/readiness` can report model checks without scanning — and every script above changes fields it describes, which invalidates the record. A cluster with no record reports those checks as `unknown` rather than guessing, which is the honest state for any deployment whose scripts predate this step. It scans both collections (roughly a minute) because answering "does any document have field X" honestly requires it; use `STAMP_DRY_RUN=true` to measure without writing.
 
 `TERM_PROJECTION_SCOPE=demo` builds a curated subset for small clusters. Use `smoke` for connectivity checks, `area` for one or more hierarchy branches, `explicit` for specific concept IDs, or `full` only when the cluster can handle the whole release.
 
@@ -121,6 +124,7 @@ TERM_PROJECTION_SCOPE=full npm run terms:rebuild
 | `NORMALIZE_APPLY=true npm run model:harden` | Apply SCTID/string normalization and remove stored descendant closures |
 | `npm run releaseid:stamp` | Stamp `releaseId`, `releaseDate`, and release metadata |
 | `npm run terms:rebuild` | Rebuild the term-level search sidecar |
+| `npm run model:stamp-state` | Record the collection's migration state for `/api/readiness`. Run last, after every other migration step. `STAMP_DRY_RUN=true` measures without writing |
 | `npm run collections:retire` | Dry-run cleanup of retired demo collections |
 
 ## Search And Navigation

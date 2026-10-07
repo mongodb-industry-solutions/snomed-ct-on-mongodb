@@ -1809,6 +1809,18 @@ export default function DemoWorkbench() {
 
   const readiness = readinessCall.response;
 
+  // Either record can be missing independently — a projection rebuild invalidates
+  // only the projection half. Collect both so the notice names every collection
+  // whose checks are reading unknown.
+  const unrecordedModelStateCollections = (() => {
+    const state = readiness?.modelState;
+    if (!state) return null;
+    const missing = [state.source, state.projection]
+      .filter((entry) => entry && !entry.recorded)
+      .map((entry) => entry.collection);
+    return missing.length > 0 ? missing : null;
+  })();
+
   const activeMeta = TAB_META[activeTab];
   const statsSummary = statsCall.response?.counts || {};
   const activeApiExamples = buildWorkflowApiExamples({
@@ -2338,10 +2350,11 @@ export default function DemoWorkbench() {
                   </div>
                 )}
 
-                {readiness?.modelState && !readiness.modelState.source?.recorded && (
+                {unrecordedModelStateCollections && (
                   <p style={{ margin: "8px 0 0", fontSize: 12.5, color: "var(--ink-secondary)" }}>
-                    Migration state has not been recorded for {readiness.modelState.source?.collection}, so the
-                    model checks read <strong>unknown</strong> rather than guessing. Run{" "}
+                    Migration state has not been recorded for{" "}
+                    {unrecordedModelStateCollections.join(" and ")}, so those checks read{" "}
+                    <strong>unknown</strong> rather than guessing. Run{" "}
                     <code>npm run model:stamp-state</code> to record it.
                   </p>
                 )}

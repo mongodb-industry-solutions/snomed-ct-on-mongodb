@@ -25,6 +25,8 @@ The default database and collections are:
 - `MONGODB_USAGE_EVENT_COLLECTION=snomed-usage-events`
 - `MONGODB_MODEL_STATE_COLLECTION=snomed-model-state`
 
+`snomed-model-state` holds the record of how far the canonical collection has been migrated. It is written by `npm run model:stamp-state`, which must run after the last migration step; every script that changes a described field deletes the record so a stale one is never served. Until a record exists, `/api/readiness` reports the model checks as `unknown` rather than inferring them from a sample.
+
 ## Optional Capabilities
 
 LLM-assisted note grounding:

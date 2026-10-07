@@ -1,5 +1,6 @@
 import "./loadEnv.mjs";
 import { MongoClient, ServerApiVersion } from "mongodb";
+import { PROJECTION_STATE_ID, SOURCE_STATE_ID, invalidateModelState } from "../lib/model-state.js";
 
 const DEFAULT_SNOMED_RELEASE_ID = "20260601";
 
@@ -59,6 +60,7 @@ async function run() {
   const dbName = env("MONGODB_DB", "terminology");
   const sourceCollectionName = env("MONGODB_COLLECTION", "snomed-irbd");
   const projectionCollectionName = env("MONGODB_TERM_SEARCH_COLLECTION", "snomed-term-search");
+  const stateCollectionName = env("MONGODB_MODEL_STATE_COLLECTION", "snomed-model-state");
 
   const client = new MongoClient(uri, {
     serverApi: {
@@ -74,6 +76,13 @@ async function run() {
     const db = client.db(dbName);
     const source = db.collection(sourceCollectionName);
     const projection = db.collection(projectionCollectionName);
+
+    // This run rewrites releaseId/releaseDate on both collections, which the
+    // recorded state describes. Invalidate up front so a failure part-way
+    // through cannot leave a record that still looks authoritative.
+    const state = db.collection(stateCollectionName);
+    await invalidateModelState(state, SOURCE_STATE_ID);
+    await invalidateModelState(state, PROJECTION_STATE_ID);
 
     const filter = overwrite ? {} : { releaseId: { $exists: false } };
     const releasePatch = {
