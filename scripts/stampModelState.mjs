@@ -11,6 +11,7 @@
 
 import "./loadEnv.mjs";
 import { MongoClient, ServerApiVersion } from "mongodb";
+import { getMongoConfig, getSearchConfig, getSemanticsConfig } from "../lib/config.js";
 import { stampModelState } from "../lib/model-state.js";
 
 function env(name, fallback = "") {
@@ -34,13 +35,19 @@ async function run() {
     throw new Error("Missing MONGODB_URI");
   }
 
-  const dbName = env("MONGODB_DB", "terminology");
-  const sourceCollectionName = env("MONGODB_COLLECTION", "snomed-irbd");
-  const projectionCollectionName = env("MONGODB_TERM_SEARCH_COLLECTION", "snomed-term-search");
-  const stateCollectionName = env("MONGODB_MODEL_STATE_COLLECTION", "snomed-model-state");
-  const releaseId = env("SNOMED_RELEASE_ID", env("RELEASE_ID_TARGET"));
-  const vectorPath = env("MONGODB_VECTOR_PATH", "embedText");
-  const manualVectorPath = env("MONGODB_MANUAL_VECTOR_PATH", "embedding_voyage_4_lite_256");
+  // Read the runtime's own config rather than re-deriving it. The vector path
+  // default depends on the vector mode (embedText for autoEmbed,
+  // embedding_voyage_4_lite_256 for manual) and both MONGODB_* and ATLAS_*
+  // aliases are honoured; duplicating those rules here let the record describe
+  // paths the runtime does not use, which readiness then reported as stale.
+  const {
+    dbName,
+    sourceCollection: sourceCollectionName,
+    projectionCollection: projectionCollectionName,
+    modelStateCollection: stateCollectionName
+  } = getMongoConfig();
+  const { vectorPath, manualVectorPath } = getSearchConfig();
+  const { releaseId } = getSemanticsConfig();
   const dryRun = envBoolean("STAMP_DRY_RUN", false);
 
   const client = new MongoClient(uri, {

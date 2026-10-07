@@ -239,9 +239,19 @@ async function run() {
       }
     ];
 
-    console.log(`[2/3] ${apply ? "Applying" : "Dry-run prepared"} normalization update pipeline`);
-
     if (apply) {
+      // Invalidate BEFORE the write, not after. A partial update that throws, or a
+      // process that dies between the write and a later invalidate, would leave
+      // the previous record authoritative even though the fields it describes have
+      // already changed. An absent record reads as unknown and is visible; a stale
+      // one is not. The other mutating scripts invalidate up front for this reason.
+      //
+      // Dropping the record rather than re-stamping here is deliberate: the
+      // documented setup runs releaseid:stamp and terms:rebuild after this script,
+      // so a record written now would describe a shape they immediately invalidate.
+      console.log("[2/3] Invalidating recorded model state");
+      await invalidateModelState(db.collection(stateCollectionName), SOURCE_STATE_ID);
+
       const result = await source.updateMany({}, pipeline, { bypassDocumentValidation: true });
       console.log(
         JSON.stringify(
@@ -253,19 +263,10 @@ async function run() {
           2
         )
       );
-    } else {
-      console.log("Dry-run only. Set NORMALIZE_APPLY=true to execute updateMany.");
-    }
-
-    // This run changes fields the recorded state describes, so the record can no
-    // longer be trusted. Drop it rather than re-stamp here: the documented setup
-    // runs releaseid:stamp and terms:rebuild after this script, so a record
-    // written now would describe a shape they immediately invalidate. An absent
-    // record reads as unknown, which is visible; a stale one is not.
-    if (apply) {
-      console.log("[2b/3] Invalidating recorded model state");
-      await invalidateModelState(db.collection(stateCollectionName), SOURCE_STATE_ID);
       console.log("Run `npm run model:stamp-state` after the final migration step to re-record it.");
+    } else {
+      console.log("[2/3] Dry-run prepared normalization update pipeline");
+      console.log("Dry-run only. Set NORMALIZE_APPLY=true to execute updateMany.");
     }
 
     console.log("[3/3] Sampling model after normalization logic");
