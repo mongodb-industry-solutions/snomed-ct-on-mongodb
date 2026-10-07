@@ -1,6 +1,14 @@
 import { getCollection } from "@/lib/mongo";
 import { getMongoConfig, getSearchConfig, getSemanticsConfig } from "@/lib/config";
 import { getSemanticScopeCacheStats } from "@/lib/semantic-scope";
+import {
+  PROJECTION_STATE_ID,
+  SOURCE_STATE_ID,
+  readModelState,
+  triAnd,
+  triNot,
+  triOr
+} from "@/lib/model-state";
 import { buildMongoErrorPayload } from "@/lib/mongo-error";
 import { elapsedMs, fail, ok } from "@/lib/http";
 
@@ -69,28 +77,6 @@ async function safeEstimatedDocumentCount(collection) {
   }
 }
 
-async function safeCountDocuments(collection, filter) {
-  try {
-    return await collection.countDocuments(filter);
-  } catch (error) {
-    if (isNamespaceMissingError(error)) {
-      return 0;
-    }
-    throw error;
-  }
-}
-
-async function safeFindOneExists(collection, filter) {
-  try {
-    return await collection.findOne(filter, { projection: { _id: 1 } }).then(Boolean);
-  } catch (error) {
-    if (isNamespaceMissingError(error)) {
-      return false;
-    }
-    throw error;
-  }
-}
-
 async function safeListBtreeIndexes(collection) {
   try {
     return await collection.indexes();
@@ -110,7 +96,8 @@ export async function GET() {
       dbName,
       sourceCollection,
       projectionCollection,
-      usageEventCollection
+      usageEventCollection,
+      modelStateCollection
     } = getMongoConfig();
     const { textIndex, vectorIndex, vectorMode, vectorPath, manualVectorPath, vectorModel } = getSearchConfig();
     const { releaseId } = getSemanticsConfig();
@@ -118,46 +105,53 @@ export async function GET() {
     const source = await getCollection(sourceCollection);
     const projection = await getCollection(projectionCollection);
     const usageEvents = await getCollection(usageEventCollection);
+    const modelState = await getCollection(modelStateCollection);
 
+    const vectorPaths = { manualVectorPath, vectorPath };
+
+    // Counts and index metadata are cheap. Collection-wide field facts come from
+    // the recorded model state, never from a scan — see lib/model-state.js.
     const [
       sourceCount,
       projectionCount,
       sourceBtreeIndexes,
       projectionBtreeIndexes,
-      vectorDocs,
-      autoEmbedDocs,
       usageEventDocs,
-      hasReleaseId,
-      hasEffectiveTime,
-      hasReleaseDate,
-      hasProjectionReleaseDate,
-      hasSemanticTagKey,
-      hasStoredDescendantClosure,
-      hasNumericAncestorIds,
-      hasNumericParentIds,
-      hasNumericChildIds,
-      hasNumericDescriptionConceptIds,
-      hasRelationshipAttributeKeys
+      sourceState,
+      projectionState
     ] = await Promise.all([
       safeEstimatedDocumentCount(source),
       safeEstimatedDocumentCount(projection),
       safeListBtreeIndexes(source),
       safeListBtreeIndexes(projection),
-      safeCountDocuments(projection, { [manualVectorPath]: { $exists: true } }),
-      safeCountDocuments(projection, { [vectorPath]: { $exists: true, $type: "string", $ne: "" } }),
       safeEstimatedDocumentCount(usageEvents),
-      safeFindOneExists(source, { releaseId: { $exists: true } }),
-      safeFindOneExists(source, { effectiveTime: { $exists: true } }),
-      safeFindOneExists(source, { releaseDate: { $exists: true } }),
-      safeFindOneExists(projection, { releaseDate: { $exists: true } }),
-      safeFindOneExists(projection, { semanticTagKey: { $exists: true } }),
-      safeFindOneExists(source, { inferredDescendantIds: { $exists: true } }),
-      safeFindOneExists(source, { inferredAncestorIds: { $type: "number" } }),
-      safeFindOneExists(source, { inferredParentIds: { $type: "number" } }),
-      safeFindOneExists(source, { inferredChildIds: { $type: "number" } }),
-      safeFindOneExists(source, { "descriptions.conceptId": { $type: "number" } }),
-      safeFindOneExists(source, { relationshipAttributeKeys: { $exists: true, $ne: [] } })
+      readModelState(modelState, { id: SOURCE_STATE_ID, collection: sourceCollection }),
+      readModelState(modelState, {
+        id: PROJECTION_STATE_ID,
+        collection: projectionCollection,
+        vectorPaths
+      })
     ]);
+
+    // A null facts object means nothing has been recorded. Every dependent value
+    // must then read null (unknown) rather than false (not ready).
+    const sf = sourceState.facts;
+    const pf = projectionState.facts;
+
+    const hasReleaseId = sf ? sf.hasReleaseId : null;
+    const hasEffectiveTime = sf ? sf.hasEffectiveTime : null;
+    const hasReleaseDate = sf ? sf.hasReleaseDate : null;
+    const hasStoredDescendantClosure = sf ? sf.hasStoredDescendantClosure : null;
+    const hasNumericAncestorIds = sf ? sf.hasNumericAncestorIds : null;
+    const hasNumericParentIds = sf ? sf.hasNumericParentIds : null;
+    const hasNumericChildIds = sf ? sf.hasNumericChildIds : null;
+    const hasNumericDescriptionConceptIds = sf ? sf.hasNumericDescriptionConceptIds : null;
+    const hasRelationshipAttributeKeys = sf ? sf.hasRelationshipAttributeKeys : null;
+
+    const hasProjectionReleaseDate = pf ? pf.hasReleaseDate : null;
+    const hasSemanticTagKey = pf ? pf.hasSemanticTagKey : null;
+    const hasManualVectors = pf ? pf.hasManualVectors : null;
+    const hasAutoEmbedVectors = pf ? pf.hasAutoEmbedVectors : null;
 
     let searchIndexes = [];
     let searchIndexError = "";
@@ -185,27 +179,30 @@ export async function GET() {
     const semanticsScopeCache = getSemanticScopeCacheStats();
 
     const usesAutoEmbedding = String(vectorMode || "").toLowerCase() === "autoembed";
-    const vectorContentPresent = usesAutoEmbedding ? autoEmbedDocs > 0 : vectorDocs > 0;
+    const vectorContentPresent = usesAutoEmbedding ? hasAutoEmbedVectors : hasManualVectors;
     const vectorDefinitionMatchesMode = usesAutoEmbedding
       ? searchIndexHasField(rawVectorIndex, "autoEmbed", vectorPath)
       : searchIndexHasField(rawVectorIndex, "vector", vectorPath);
     const vectorReady = Boolean(vectorSummary?.queryable) && vectorDefinitionMatchesMode;
-    const releaseMetadataReady = hasReleaseId && hasReleaseDate && hasProjectionReleaseDate;
-    const descendantClosureRetired = !hasStoredDescendantClosure;
-    const sctidStringNormalized = !(
-      hasNumericAncestorIds ||
-      hasNumericParentIds ||
-      hasNumericChildIds ||
-      hasNumericDescriptionConceptIds
+
+    const releaseMetadataReady = triAnd(hasReleaseId, hasReleaseDate, hasProjectionReleaseDate);
+    const descendantClosureRetired = triNot(hasStoredDescendantClosure);
+    const sctidStringNormalized = triNot(
+      triOr(hasNumericAncestorIds, hasNumericParentIds, hasNumericChildIds, hasNumericDescriptionConceptIds)
     );
-    const termSidecarModelReady = projectionHasConceptLookupIndex && hasSemanticTagKey;
-    const relationshipAttributeReady = hasRelationshipAttributeKeys && sourceHasRelationshipAttributeIndex;
-    const hardenedModelReady =
-      releaseMetadataReady &&
-      descendantClosureRetired &&
-      sctidStringNormalized &&
-      termSidecarModelReady &&
-      relationshipAttributeReady;
+    const termSidecarModelReady = triAnd(projectionHasConceptLookupIndex, hasSemanticTagKey);
+    const relationshipAttributeReady = triAnd(hasRelationshipAttributeKeys, sourceHasRelationshipAttributeIndex);
+    const hardenedModelReady = triAnd(
+      releaseMetadataReady,
+      descendantClosureRetired,
+      sctidStringNormalized,
+      termSidecarModelReady,
+      relationshipAttributeReady
+    );
+
+    // `!vectorContentPresent || vectorReady`: a queryable vector index satisfies
+    // the clause whatever the content, so only the not-ready case can be unknown.
+    const vectorClause = vectorReady ? true : triNot(vectorContentPresent);
 
     const readiness = {
       projectionPopulated: projectionCount > 0,
@@ -213,22 +210,26 @@ export async function GET() {
       vectorIndexReady: vectorReady,
       vectorDocsPresent: vectorContentPresent,
       ancestorLookupReady: sourceHasAncestorIndex,
-      releaseDiffReady: hasReleaseId || hasEffectiveTime,
-      releaseDiffIndexed:
-        (hasReleaseId && sourceHasReleaseIdIndex) ||
-        (hasEffectiveTime && sourceHasEffectiveTimeIndex),
+      releaseDiffReady: triOr(hasReleaseId, hasEffectiveTime),
+      releaseDiffIndexed: triOr(
+        triAnd(hasReleaseId, sourceHasReleaseIdIndex),
+        triAnd(hasEffectiveTime, sourceHasEffectiveTimeIndex)
+      ),
       releaseMetadataReady,
       descendantClosureRetired,
       sctidStringNormalized,
       termSidecarModelReady,
       relationshipAttributeReady,
       hardenedModelReady,
-      architectureReady:
-        projectionCount > 0 &&
-        Boolean(textSummary?.queryable) &&
-        sourceHasAncestorIndex &&
-        (!vectorContentPresent || vectorReady)
+      architectureReady: triAnd(
+        projectionCount > 0,
+        Boolean(textSummary?.queryable),
+        sourceHasAncestorIndex,
+        vectorClause
+      )
     };
+
+    const guidance = "Run `npm run model:stamp-state` to record the collection's migration state.";
 
     return ok({
       ok: true,
@@ -238,6 +239,7 @@ export async function GET() {
         sourceCollection,
         projectionCollection,
         usageEventCollection,
+        modelStateCollection,
         releaseId,
         textIndex,
         vectorIndex,
@@ -246,11 +248,28 @@ export async function GET() {
         vectorModel,
         manualVectorPath
       },
+      modelState: {
+        // recorded:false means every dependent check reads null, i.e. unknown.
+        source: {
+          recorded: sourceState.recorded,
+          recordedAt: sourceState.recordedAt,
+          recordedBy: sourceState.recordedBy,
+          releaseId: sourceState.releaseId,
+          collection: sourceCollection,
+          guidance: sourceState.recorded ? null : guidance
+        },
+        projection: {
+          recorded: projectionState.recorded,
+          recordedAt: projectionState.recordedAt,
+          recordedBy: projectionState.recordedBy,
+          collection: projectionCollection,
+          staleVectorPaths: projectionState.stalePaths,
+          guidance: projectionState.recorded ? null : guidance
+        }
+      },
       counts: {
         sourceCount,
         projectionCount,
-        vectorDocs,
-        autoEmbedDocs,
         usageEventDocs
       },
       indexes: {
@@ -277,7 +296,9 @@ export async function GET() {
         hasNumericParentIds,
         hasNumericChildIds,
         hasNumericDescriptionConceptIds,
-        hasRelationshipAttributeKeys
+        hasRelationshipAttributeKeys,
+        hasManualVectors,
+        hasAutoEmbedVectors
       },
       caches: {
         semanticsScope: semanticsScopeCache
