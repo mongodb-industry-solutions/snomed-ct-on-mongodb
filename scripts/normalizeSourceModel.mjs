@@ -1,5 +1,6 @@
 import "./loadEnv.mjs";
 import { MongoClient, ServerApiVersion } from "mongodb";
+import { SOURCE_STATE_ID, invalidateModelState } from "../lib/model-state.js";
 
 function env(name, fallback = "") {
   const value = process.env[name];
@@ -115,6 +116,7 @@ async function run() {
 
   const dbName = env("MONGODB_DB", "terminology");
   const sourceCollectionName = env("MONGODB_COLLECTION", "snomed-irbd");
+  const stateCollectionName = env("MONGODB_MODEL_STATE_COLLECTION", "snomed-model-state");
   const apply = envBoolean("NORMALIZE_APPLY", false);
 
   const client = new MongoClient(uri, {
@@ -237,9 +239,19 @@ async function run() {
       }
     ];
 
-    console.log(`[2/3] ${apply ? "Applying" : "Dry-run prepared"} normalization update pipeline`);
-
     if (apply) {
+      // Invalidate BEFORE the write, not after. A partial update that throws, or a
+      // process that dies between the write and a later invalidate, would leave
+      // the previous record authoritative even though the fields it describes have
+      // already changed. An absent record reads as unknown and is visible; a stale
+      // one is not. The other mutating scripts invalidate up front for this reason.
+      //
+      // Dropping the record rather than re-stamping here is deliberate: the
+      // documented setup runs releaseid:stamp and terms:rebuild after this script,
+      // so a record written now would describe a shape they immediately invalidate.
+      console.log("[2/3] Invalidating recorded model state");
+      await invalidateModelState(db.collection(stateCollectionName), SOURCE_STATE_ID);
+
       const result = await source.updateMany({}, pipeline, { bypassDocumentValidation: true });
       console.log(
         JSON.stringify(
@@ -251,7 +263,9 @@ async function run() {
           2
         )
       );
+      console.log("Run `npm run model:stamp-state` after the final migration step to re-record it.");
     } else {
+      console.log("[2/3] Dry-run prepared normalization update pipeline");
       console.log("Dry-run only. Set NORMALIZE_APPLY=true to execute updateMany.");
     }
 

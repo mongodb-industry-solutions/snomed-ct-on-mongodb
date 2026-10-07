@@ -16,7 +16,8 @@
     "indexes:build": "node scripts/buildPlatformIndexes.mjs",
     "collections:retire": "node scripts/dropRetiredCollections.mjs",
     "releaseid:stamp": "node scripts/stampReleaseId.mjs",
-    "model:harden": "node scripts/normalizeSourceModel.mjs"
+    "model:harden": "node scripts/normalizeSourceModel.mjs",
+    "model:stamp-state": "node scripts/stampModelState.mjs"
   },
   "dependencies": {
     "@leafygreen-ui/badge": "^10.2.4",
@@ -24,11 +25,12 @@
     "@leafygreen-ui/leafygreen-provider": "^5.0.4",
     "@xyflow/react": "^12.11.1",
     "mongodb": "^6.20.0",
-    "next": "^15.5.18",
+    "next": "^15.5.27",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
   "overrides": {
-    "postcss": "^8.5.10"
+    "postcss": "^8.5.29",
+    "sharp": "^0.35.4"
   }
 }

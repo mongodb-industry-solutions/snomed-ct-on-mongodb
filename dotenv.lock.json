@@ -50,6 +50,13 @@
       "default": "snomed-usage-events",
       "description": "Lightweight search/navigation telemetry collection."
     },
+    "MONGODB_MODEL_STATE_COLLECTION": {
+      "category": "mongodb",
+      "required": false,
+      "secret": false,
+      "default": "snomed-model-state",
+      "description": "Records the canonical collection's migration state so /api/readiness can report it without scanning. Written by scripts/stampModelState.mjs."
+    },
     "SNOMED_RELEASE_ID": {
       "category": "runtime",
       "required": false,

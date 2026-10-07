@@ -901,6 +901,41 @@
         }
       }
     },
+    "/api/stats": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Collection counters for the workspace sidebar",
+        "description": "Returns estimated document counts for the canonical SNOMED collection and the term search projection. Uses collection metadata, so the cost is independent of collection size.",
+        "operationId": "stats",
+        "x-demoStatus": "diagnostic",
+        "responses": {
+          "200": {
+            "description": "Collection counters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "ok": true,
+                  "pattern": "collection-stats",
+                  "counts": {
+                    "sourceCount": 549020,
+                    "projectionCount": 1602341
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
     "/api/ping": {
       "get": {
         "tags": [
