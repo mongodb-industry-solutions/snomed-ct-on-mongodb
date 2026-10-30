@@ -77,7 +77,40 @@ The central claim, and the thing to demo: **one document per concept, one platfo
 
 ---
 
-## 5. Value drivers (the talk track)
+## 5. Proposing the principal diagnosis and comorbidities — a recommended practice
+
+A note rarely mentions one condition. A discharge summary can name a dozen: the reason for admission, chronic conditions, symptoms, things ruled out, a parent's illness. A coder must name **one principal diagnosis**, the condition chiefly responsible for the encounter, plus the **comorbidities** that also need coding. That choice drives billing groupers (DRGs), quality measures, registries and cohort queries, so getting it wrong costs money, distorts reporting and puts patients in the wrong cohort.
+
+The demo proposes both and the reviewer confirms. Every step below is a good practice any SNOMED-based coding pipeline can adopt:
+
+| Practice | What it does | Why it matters |
+|---|---|---|
+| **1. Read the note's structure** | A condition written under *Assessment* or *Discharge diagnoses* weighs more than one under *History*, *Plan* or *Family history*. This works in English and Spanish, and with sections the LLM labels itself. | Where the clinician writes a diagnosis is the strongest signal of what the encounter was about. |
+| **2. Respect clinical status** | Only a condition that is *present* can be the principal. Negated and family-history mentions are excluded. Past and suspected conditions are listed separately and start unticked. | A ruled-out pneumonia or a resolved condition is never coded as an active problem by default. |
+| **3. Use the SNOMED hierarchy** | When the note mentions "heart failure" and "decompensated chronic heart failure", they are one problem, coded at the most specific concept, not two competing codes. | Fewer duplicate and redundant codes, and the code says as much as the note does. |
+| **4. Separate diagnoses from symptoms** | Findings such as "shortness of breath" or "cough" are shown as *presenting symptoms*, not comorbidities. A symptom only leads when no disorder is documented. | Symptoms explained by the diagnosis aren't coded on top of it. |
+| **5. Make disagreement visible** | The scoring rules and the optional LLM review each propose a principal. When they differ, the reviewer sees both. The LLM can only choose from candidates MongoDB retrieved. | The reviewer decides with full information. Neither component silently overrides the other. |
+| **6. Measure it** | Each gold note records the coder's principal and comorbidities. The benchmark reports principal accuracy (top-1 and top-3) and comorbidity precision and recall. | Every rule change can be checked against a coder's answer instead of tuned by eye. |
+
+**Why MongoDB makes practice 3 cheap.** Every concept document already carries its precomputed ancestor list, the same one that powers subsumption queries (§4). Checking whether one coded concept is a kind of another is an in-memory set lookup on data the grounding step already retrieved. It needs no graph traversal and no extra query.
+
+### What it changed, measured
+
+On the demo's 7 gold notes, with the same grounding results scored by the previous and the new logic (default LLM extraction):
+
+| Measure | Before | After |
+|---|---|---|
+| Principal diagnosis, exact code | 43% | 57% |
+| Comorbidity precision (proposed comorbidities that are correct) | 37% | 62% |
+| Comorbidity recall (expected comorbidities that are proposed) | 71% | 86% |
+
+Treat these as directional. Seven notes is a demo set, not a clinical validation. Almost every remaining miss happens before scoring: the right concept was never retrieved from the demo's scoped dataset. For example, "diabetic nephropathy" retrieved *Diabetic microangiopathy*. More scoring rules won't fix that; better retrieval and a fuller terminology release will. That is why the benchmark measures retrieval and diagnosis as separate axes.
+
+> **Business value:** fewer wrong principal diagnoses and fewer redundant or inactive codes reach the reviewer. Review is faster and the stored coding is more trustworthy. Because the logic is transparent and measured, a governance team can see *why* each proposal was made and check it against their own gold notes.
+
+---
+
+## 6. Value drivers (the talk track)
 
 - **Lower TCO & complexity** — consolidate four data stores into one; eliminate the sync pipelines and the specialized ops for each.
 - **Faster time-to-value** — the reference pattern and working demo shorten the path from "SNOMED is on our roadmap" to a running terminology service.
@@ -87,7 +120,7 @@ The central claim, and the thing to demo: **one document per concept, one platfo
 
 ---
 
-## 6. Where it fits
+## 7. Where it fits
 
 This is a **terminology + clinical-coding service** that sits behind, and feeds, the systems that need standardized clinical meaning:
 
@@ -100,7 +133,7 @@ It is a **reference blueprint**, not a turnkey product — deliberately, so arch
 
 ---
 
-## 7. What it is *not* (set expectations honestly)
+## 8. What it is *not* (set expectations honestly)
 
 - **Not a licensed SNOMED distribution.** SNOMED and SNOMED CT are registered trademarks of SNOMED International (IHTSDO). You must obtain the license for your country/use case and load your own release; the demo ships no terminology content.
 - **Not production-hardened.** Before any production or PHI-bearing deployment, address authentication/authorization, multi-tenant isolation, PHI handling and BAA terms with any LLM gateway, reviewer audit logging, index sizing/cost, and shared caching. See **Production Boundaries** in the [README](../README.md).
@@ -108,11 +141,11 @@ It is a **reference blueprint**, not a turnkey product — deliberately, so arch
 
 ---
 
-## 8. Suggested demo flow (10–15 minutes)
+## 9. Suggested demo flow (10–15 minutes)
 
 1. **Overview** — frame the problem and the "four stores → one" consolidation.
 2. **Navigation** — search "heart failure" three ways (lexical / semantic / hybrid); open a concept; show the hierarchy and "everything under" as one indexed query.
-3. **Ground a Note** — paste a note; show extraction with negation/context; show that candidates come from MongoDB and a reviewer confirms; store the coding.
+3. **Ground a Note** — paste a note; show extraction with negation/context; show that candidates come from MongoDB and a reviewer confirms; store the coding. Use the cardio-renal example to show the principal diagnosis (§5): the decompensated heart failure from the assessment is proposed as principal, the "heart failure" from the history is folded into it, hypertension and chronic kidney disease appear as comorbidities, and the suspected pneumonia sits in its own unticked group. Expect a few wrong concepts from the demo's scoped dataset (e.g. "shortness of breath" may retrieve an unrelated rare disorder). Use them to show why the reviewer confirms every code and why the benchmark measures retrieval separately.
 4. **Query by meaning** — find the stored note by SNOMED ancestor.
 5. **Benchmark** — compare two models on quality, cost, and latency.
-6. **Close** — recap the value drivers in §5 and point to Production Boundaries for the "what's next for us" conversation.
+6. **Close** — recap the value drivers in §6 and point to Production Boundaries for the "what's next for us" conversation.

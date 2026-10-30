@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import PromptPanel from "@/components/PromptPanel";
+import { isDefaultTuning, tuningOverrides } from "@/components/HybridTuning";
 
 // Extraction-model benchmark. Headline score = the LLM EVIDENCE GRAPH: for each
 // gold note, how well the model extracts the expected facts (mention + assertion
@@ -17,8 +18,6 @@ const VIOLET = "#8F4FBF";
 const RED = "#DB3030";
 const AMBER = "#8A6D1F";
 const BORDER = "#e3e7ea";
-const MODELS = (process.env.NEXT_PUBLIC_LLM_GROUNDING_MODELS || "gpt-5.5")
-  .split(",").map((s) => s.trim()).filter(Boolean);
 
 const pct = (x) => (x == null ? "—" : `${Math.round(x * 100)}%`);
 const accBg = (x) => `rgba(0,104,74,${(0.05 + (x || 0) * 0.25).toFixed(3)})`;
@@ -65,8 +64,9 @@ function MiniBar({ label, value, color = GREEN }) {
   );
 }
 
-export default function BenchmarkView({ sessionModel, onPickModel }) {
-  const [selectedModels, setSelectedModels] = useState(MODELS.slice(0, Math.min(4, MODELS.length)));
+export default function BenchmarkView({ sessionModel, onPickModel, hybridTuning = null }) {
+  const [availableModels, setAvailableModels] = useState([]);
+  const [selectedModels, setSelectedModels] = useState([]);
   const [gold, setGold] = useState([]);
   const [selectedNotes, setSelectedNotes] = useState([]);
   const [searchMode, setSearchMode] = useState("lexical");
@@ -83,8 +83,12 @@ export default function BenchmarkView({ sessionModel, onPickModel }) {
     let cancelled = false;
     fetch("/api/benchmark", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ metaOnly: true }) })
       .then((r) => r.json())
-      .then((d) => { if (cancelled || !d?.goldNotes) return; setGold(d.goldNotes); setSelectedNotes(d.goldNotes.map((g) => g.id)); })
-      .catch(() => {});
+      .then((d) => {
+        if (cancelled || !d?.goldNotes || !d?.availableModels) return;
+        setGold(d.goldNotes); setSelectedNotes(d.goldNotes.map((g) => g.id));
+        setAvailableModels(d.availableModels); setSelectedModels(d.availableModels.slice(0, 4));
+      })
+      .catch(() => { if (!cancelled) setError("Could not load the benchmark models and notes. Refresh to retry."); });
     return () => { cancelled = true; };
   }, []);
 
@@ -97,12 +101,15 @@ export default function BenchmarkView({ sessionModel, onPickModel }) {
     for (const model of selectedModels) for (const note of notes) tasks.push({ model, noteId: note.id, title: note.title });
     if (!tasks.length) { setError("Select at least one model and one note."); return; }
     const acc = {};
+    // Hybrid runs use the session's fusion tuning (set in Navigation), so the
+    // benchmark measures the same settings the user searches with.
+    const overrides = searchMode === "hybrid" ? tuningOverrides(hybridTuning?.tuning, hybridTuning?.defaults) : null;
     setProgress({ running: true, done: 0, total: tasks.length, current: "" });
     for (let i = 0; i < tasks.length; i++) {
       const t = tasks[i];
       setProgress({ running: true, done: i, total: tasks.length, current: `${t.title} · ${t.model}` });
       try {
-        const res = await fetch("/api/benchmark", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ models: [t.model], noteIds: [t.noteId], searchMode }) });
+        const res = await fetch("/api/benchmark", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ models: [t.model], noteIds: [t.noteId], searchMode, ...(overrides ? { tuning: overrides } : {}) }) });
         const d = await res.json();
         if (!res.ok || d?.ok === false) throw new Error(d?.error || `HTTP ${res.status}`);
         acc[key(t.model, t.noteId)] = d.models?.[0]?.notes?.[0] || { noteId: t.noteId, scored: false, error: "no result" };
@@ -176,9 +183,9 @@ export default function BenchmarkView({ sessionModel, onPickModel }) {
 
       <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16, background: "#fff", marginBottom: 18 }}>
         {/* Models */}
-        <PickerHeader label="Models" count={`${selectedModels.length}/${MODELS.length}`} onAll={() => setSelectedModels(MODELS)} onClear={() => setSelectedModels([])} disabled={progress.running} />
+        <PickerHeader label="Models" count={`${selectedModels.length}/${availableModels.length}`} onAll={() => setSelectedModels(availableModels)} onClear={() => setSelectedModels([])} disabled={progress.running} />
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-          {MODELS.map((m) => {
+          {availableModels.map((m) => {
             const on = selectedModels.includes(m);
             return <Chip key={m} on={on} disabled={progress.running} onClick={() => toggle(selectedModels, setSelectedModels, m)}>{on ? "✓ " : ""}{m}</Chip>;
           })}
@@ -206,6 +213,13 @@ export default function BenchmarkView({ sessionModel, onPickModel }) {
             </select>
           </label>
           <span style={{ fontSize: 12, color: "#889397" }}>Evidence-graph score is retrieval-independent; the mode only affects the retrieval axis.</span>
+          {searchMode === "hybrid" && hybridTuning?.tuning ? (
+            <span style={{ fontSize: 11.5, color: isDefaultTuning(hybridTuning.tuning, hybridTuning.defaults) ? "#5C6C75" : "#8A6D1F" }}
+              title="Session fusion tuning — change it in Navigation → Hybrid → Fusion tuning">
+              Fusion: {hybridTuning.tuning.fusionMode} · lexical {hybridTuning.tuning.lexicalWeight} / semantic {hybridTuning.tuning.semanticWeight} · rerank {hybridTuning.tuning.rerank ? "on" : "off"}
+              {isDefaultTuning(hybridTuning.tuning, hybridTuning.defaults) ? " (defaults)" : " (session custom)"}
+            </span>
+          ) : null}
         </div>
         {error ? <p style={{ color: RED, fontSize: 13, marginTop: 10 }}>{error}</p> : null}
 

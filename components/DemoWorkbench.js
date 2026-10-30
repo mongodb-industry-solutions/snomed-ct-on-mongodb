@@ -7,6 +7,9 @@ import ConceptBrowser, { PRIMARY_PATH_POLICY_HINT, PRIMARY_PATH_POLICY_LABEL, bu
 import ConceptHierarchyFlow from "./ConceptHierarchyFlow";
 import NavigateWorkbench from "./NavigateWorkbench";
 import GroundWorkbench from "./GroundWorkbench";
+import ClinicalSearchWorkbench from "./ClinicalSearchWorkbench";
+import { isDefaultTuning, useHybridTuning } from "./HybridTuning";
+import { DEFAULT_LLM_MODEL } from "@/lib/llm-models";
 import dynamic from "next/dynamic";
 import Badge from "@leafygreen-ui/badge";
 import Icon from "@leafygreen-ui/icon";
@@ -16,10 +19,6 @@ const Code = dynamic(() => import("@leafygreen-ui/code"), { ssr: false });
 const ApiDocsPanel = dynamic(() => import("@/components/ApiDocsPanel"), { ssr: false });
 const BenchmarkView = dynamic(() => import("@/components/BenchmarkView"), { ssr: false });
 import { buildWorkflowApiExamples, formatApiPayload } from "./workflowApiExamples";
-
-// Models selectable as the active grounding model for the session.
-const SESSION_MODELS = (process.env.NEXT_PUBLIC_LLM_GROUNDING_MODELS || "gpt-5.5")
-  .split(",").map((s) => s.trim()).filter(Boolean);
 
 // Operator-only maintenance advisories (model:harden, index hints, etc.) are
 // hidden by default so the public blueprint doesn't surface internal TODOs.
@@ -60,6 +59,7 @@ const TAB_META = {
     title: "SNOMED Navigation",
     summary: "Search, inspect, and navigate SNOMED CT concepts with deterministic lexical retrieval."
   },
+  clinicalSearch: { label: "Search Coded Notes", icon: ICONS.search, title: "Search clinical records by meaning", summary: "Ground a natural-language request into SNOMED concepts, then search confirmed clinical codings." },
   api: {
     label: "API",
     icon: ICONS.fileText,
@@ -88,7 +88,7 @@ const TAB_META = {
 // legacy secondary-use, value-set authoring, and governance surfaces are removed
 // from the public product.
 const SIDEBAR_SECTIONS = [
-  { label: "SNOMED CT on MongoDB", tabs: ["foundations", "navigate", "intelligent", "benchmark", "api"] }
+  { label: "SNOMED CT on MongoDB", tabs: ["foundations", "navigate", "intelligent", "clinicalSearch", "benchmark", "api"] }
 ];
 
 // Navigate has its own contextual "API" sub-tab (per concept), so the shared
@@ -1186,17 +1186,32 @@ export default function DemoWorkbench() {
   // Active grounding model for the session — chosen in the header (informed by
   // the benchmark), used as the default extraction model in Ground a Note.
   // Persisted to localStorage; synced after mount to avoid a hydration mismatch.
-  const [sessionModel, setSessionModelState] = useState(SESSION_MODELS[0]);
+  const [sessionModels, setSessionModels] = useState([DEFAULT_LLM_MODEL]);
+  const [sessionModel, setSessionModelState] = useState(DEFAULT_LLM_MODEL);
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem("sessionModel");
-      if (saved && SESSION_MODELS.includes(saved)) setSessionModelState(saved);
-    } catch (_e) { /* localStorage unavailable */ }
+    let cancelled = false;
+    fetch("/api/llm-config", { cache: "no-store" })
+      .then((response) => { if (!response.ok) throw new Error("Model configuration unavailable"); return response.json(); })
+      .then((config) => {
+        if (cancelled || !config.availableModels?.length) return;
+        setSessionModels(config.availableModels);
+        let model = config.defaultModel;
+        try {
+          const saved = window.localStorage.getItem("sessionModel");
+          if (saved && config.availableModels.includes(saved)) model = saved;
+        } catch (_e) { /* localStorage unavailable */ }
+        setSessionModelState(model);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, []);
   const setSessionModel = (m) => {
     setSessionModelState(m);
     try { window.localStorage.setItem("sessionModel", m); } catch (_e) { /* ignore */ }
   };
+  // Hybrid fusion tuning for the session — edited in Navigation, applied to
+  // navigator search, Ground a Note hybrid retrieval, and hybrid benchmarks.
+  const hybridTuning = useHybridTuning();
   // Sidebar is always visible; appendixOpen retained for compatibility
   const [appendixOpen, setAppendixOpen] = useState(true);
   const [query, setQuery] = useState("");
@@ -1860,6 +1875,9 @@ export default function DemoWorkbench() {
 
   return (
     <main className="page-shell">
+      {/* Nav + header stick together; as separate sticky elements the nav
+          (higher z-index) covered the header once the page scrolled. */}
+      <div className="appTopChrome">
       {/* ── SIDEBAR ── */}
       <nav className="appSidebar">
         <div className="sidebarBrand">
@@ -1916,14 +1934,21 @@ export default function DemoWorkbench() {
           <p className="appBreadcrumbSub">{activeMeta?.summary || ""}</p>
         </div>
         <div className="appHeaderRight">
-          {SESSION_MODELS.length > 1 ? (
+          {sessionModels.length > 1 ? (
             <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#5C6C75" }}>
               <span style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", fontSize: 10.5 }}>Session model</span>
               <select value={sessionModel} onChange={(e) => setSessionModel(e.target.value)} title="Extraction model used when you Ground a Note"
                 style={{ fontSize: 12, padding: "4px 8px", borderRadius: 7, border: "1px solid #C1C7CB", background: "#fff", color: "#001E2B", fontWeight: 600, cursor: "pointer", maxWidth: 200 }}>
-                {SESSION_MODELS.map((m) => <option key={m} value={m}>{m}</option>)}
+                {sessionModels.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
             </label>
+          ) : null}
+          {hybridTuning.tuning && !isDefaultTuning(hybridTuning.tuning, hybridTuning.defaults) ? (
+            <button type="button" onClick={() => openTab("navigate")}
+              title="Custom hybrid fusion tuning is active for this session (Navigation → Hybrid → Fusion tuning)"
+              style={{ fontSize: 11, fontWeight: 700, color: "#8A6D1F", background: "#FBF7E9", border: "1px solid #E9E2C8", borderRadius: 999, padding: "3px 9px", cursor: "pointer" }}>
+              Hybrid tuning: custom
+            </button>
           ) : null}
           <span className="appStatusLive">
             <span className="appStatusLiveDot" />
@@ -1935,6 +1960,7 @@ export default function DemoWorkbench() {
           </button>
         </div>
       </header>
+      </div>
 
       {/* ── MAIN CONTENT ── */}
       <div className="appMain">
@@ -2077,19 +2103,21 @@ export default function DemoWorkbench() {
           TAB: NAVIGATE
           ============================================================ */}
       {activeTab === "navigate" && (
-        <NavigateWorkbench defaultLanguageCode={languageCode} seed={navSeed} />
+        <NavigateWorkbench defaultLanguageCode={languageCode} seed={navSeed} hybridTuning={hybridTuning} />
       )}
 
       {/* ============================================================
           TAB: CLINICAL ASSISTANT
           ============================================================ */}
       {activeTab === "intelligent" && (
-        <GroundWorkbench defaultLanguageCode={languageCode} sessionModel={sessionModel} onSessionModelChange={setSessionModel} />
+        <GroundWorkbench defaultLanguageCode={languageCode} sessionModel={sessionModel} onSessionModelChange={setSessionModel} hybridTuning={hybridTuning} />
       )}
 
       {/* ============================================================
           TAB: API REFERENCE (curated OpenAPI view)
           ============================================================ */}
+      {activeTab === "clinicalSearch" && <ClinicalSearchWorkbench sessionModel={sessionModel} />}
+
       {activeTab === "api" && (
         <div className={styles.studioShell}>
           <ApiDocsPanel />
@@ -2101,7 +2129,7 @@ export default function DemoWorkbench() {
           ============================================================ */}
       {activeTab === "benchmark" && (
         <div className={styles.studioShell}>
-          <BenchmarkView sessionModel={sessionModel} onPickModel={setSessionModel} />
+          <BenchmarkView sessionModel={sessionModel} onPickModel={setSessionModel} hybridTuning={hybridTuning} />
         </div>
       )}
 

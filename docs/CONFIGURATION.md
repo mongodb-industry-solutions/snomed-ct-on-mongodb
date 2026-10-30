@@ -36,9 +36,12 @@ ENABLE_LLM_GROUNDING=true
 LLM_BASE_URL=<openai-compatible-responses-api-base>
 LLM_API_KEY=<key>
 LLM_AUTH_HEADER=api-key
-LLM_API_STYLE=chat
-LLM_GROUNDING_MODEL=<model-id>
+LLM_API_STYLE=responses
+LLM_GROUNDING_MODEL=gpt-5.4-mini
+LLM_GROUNDING_MODELS=gpt-5.4-mini,gpt-5.4,gpt-5.5
 ```
+
+The model roster is read at runtime by the browser from `/api/llm-config` and benchmark metadata. `NEXT_PUBLIC_LLM_GROUNDING_MODELS` is retired; it no longer controls either picker. Configure additional provider IDs only when served by your gateway. A model name in this list routes to an existing gateway deployment; the demo does not provision model deployments.
 
 Voyage rerank/manual embedding fallback:
 

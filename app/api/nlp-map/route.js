@@ -5,10 +5,10 @@ import { getMongoConfig, getSearchConfig, getSemanticsConfig, getHybridSearchCon
 import { extractMentionsWithLlm, llmMentionContext } from "@/lib/clinical-extract";
 import { resolveSemanticScope } from "@/lib/semantic-scope";
 import { buildNavigatorSearchPipeline } from "@/lib/pipelines";
-import { runHybridSearch } from "@/lib/hybrid-search";
+import { describeHybridTuning, resolveHybridTuning, runHybridSearch, traceStep, tracedAggregate } from "@/lib/hybrid-search";
 import { ensureSearchIndexReady } from "@/lib/search-readiness";
 import { buildMongoErrorPayload } from "@/lib/mongo-error";
-import { computePrimaryDiagnosisCandidates } from "@/lib/principal-diagnosis";
+import { computeDiagnosisProposal } from "@/lib/principal-diagnosis";
 import { buildSearchQueryVariants, rerankNavigatorResults } from "@/lib/search-normalization";
 import { emitUsageEventSafe } from "@/lib/usage-events";
 import { elapsedMs, fail, ok, parseJson } from "@/lib/http";
@@ -720,7 +720,11 @@ function deriveContextFromSignals(signals) {
     };
   }
 
-  if (items.some((signal) => signal.cueType === "history")) {
+  // A "History:" header alone doesn't make a condition past: past medical
+  // history lists chronic problems that are still active (comorbidities). Only
+  // a sentence cue ("history of", "previous", "resolved") marks it historical;
+  // the section still lowers its weight as a principal-diagnosis candidate.
+  if (items.some((signal) => signal.cueType === "history" && signal.source !== "section")) {
     return {
       assertion: "historical",
       contextType: "history",
@@ -1047,7 +1051,12 @@ function summarizeCandidate(candidate, normalizedPhrase) {
     matchedBy: inferMatchMode(candidate, normalizedPhrase),
     matchedText: candidate?.matchedText || candidate?.term || null,
     matchReason: candidate?.matchReason || null,
-    matchTier: Number.isFinite(Number(candidate?.matchTier)) ? Number(candidate.matchTier) : null
+    matchTier: Number.isFinite(Number(candidate?.matchTier)) ? Number(candidate.matchTier) : null,
+    // Hybrid provenance (absent on lexical-only grounding): which engines found
+    // it, the per-engine fusion breakdown, and the rerank score.
+    foundBy: Array.isArray(candidate?.foundBy) ? candidate.foundBy : null,
+    fusion: candidate?.fusion || null,
+    rerankScore: typeof candidate?.rerankScore === "number" ? candidate.rerankScore : null
   };
 }
 
@@ -1614,6 +1623,12 @@ async function mapWithConcurrency(items, concurrency, iteratee) {
   return results;
 }
 
+function countBy(values) {
+  const counts = {};
+  for (const v of values) counts[v || "unknown"] = (counts[v || "unknown"] || 0) + 1;
+  return counts;
+}
+
 function shouldSkipPhraseLookup(phraseEntry) {
   return Number(phraseEntry?.candidateScore || 0) < 4;
 }
@@ -1677,7 +1692,9 @@ function normalizeHybridMatch(r) {
     score: rr != null ? rr * 100 : (typeof r.vectorScore === "number" ? r.vectorScore * 100 : Number(r.rrfScore || 0) * 1000),
     rerankScore: rr,
     vectorScore: typeof r.vectorScore === "number" ? r.vectorScore : null,
-    foundBy: r.foundBy
+    foundBy: r.foundBy,
+    fusion: r.fusion || null,
+    fusedRank: r.fusedRank ?? null
   };
 }
 
@@ -1695,6 +1712,18 @@ function mergeCandidatesByConcept(...lists) {
   return merged;
 }
 
+// Grounding runs one hybrid search per mention, so by default it uses the
+// smaller per-phrase pool. Session tuning still applies: an explicit
+// candidatePool / rerankPool from the caller overrides the grounding pool.
+function groundingHybridConfig(baseConfig, tuning) {
+  const withGroundingPools = {
+    ...baseConfig,
+    candidatePool: baseConfig.groundingCandidatePool,
+    rerankPool: baseConfig.groundingCandidatePool
+  };
+  return resolveHybridTuning(withGroundingPools, tuning);
+}
+
 async function resolvePhrase(
   collection,
   {
@@ -1708,7 +1737,8 @@ async function resolvePhrase(
     searchTimeoutMs,
     perPhraseLimit,
     includeScoreDetails,
-    hybridOverride
+    hybridOverride,
+    hybridConfig
   }
 ) {
   if (shouldSkipPhraseLookup(phraseEntry)) {
@@ -1747,13 +1777,21 @@ async function resolvePhrase(
     end: phraseEntry.end,
     text: phraseEntry.phrase
   };
-  const hybridCfg = getHybridSearchConfig();
+  const hybridCfg = hybridConfig || groundingHybridConfig(getHybridSearchConfig());
   const useHybrid = typeof hybridOverride === "boolean" ? hybridOverride : hybridCfg.groundingEnabled;
+  // Every step this mention actually runs, in order (see traceStep). Returned
+  // as `trace` so the UI shows the real pipelines, not a reconstruction.
+  const trace = [];
+  const done = (result) => ({ ...result, trace });
 
   try {
     let exactResults = [];
     try {
-      const exactRawResults = await collection.aggregate(exactPipeline, { maxTimeMS: Math.min(searchTimeoutMs, 900) }).toArray();
+      const exactRawResults = await tracedAggregate(collection, exactPipeline, { maxTimeMS: Math.min(searchTimeoutMs, 900) }, trace, {
+        role: "exact-lookup",
+        label: "Exact lookup — MongoDB Search (phrase + autocomplete)",
+        params: { variants: buildSearchQueryVariants(phraseEntry.phrase).slice(0, 4) }
+      });
       exactResults = rerankNavigatorResults({
         query: phraseEntry.phrase,
         results: scopeTruncated ? exactRawResults : applyScopePostFilter(exactRawResults, conceptIdScope),
@@ -1763,8 +1801,17 @@ async function resolvePhrase(
       // Legacy path: exact lexical hit wins outright. With hybrid grounding on,
       // we instead fold exact hits into the fused pool below so a strong
       // semantic candidate can compete with a weak exact-token match.
+      traceStep(trace, {
+        kind: "app",
+        role: "lexical-tiering",
+        label: "Match tiering (in the app)",
+        outcome: "ok",
+        detail: `Classified ${exactRawResults.length} hits by how they matched (exact preferred term, synonym, FSN, partial…) and kept the best ${exactResults.length}.`,
+        rows: exactResults.length
+      });
       if (!useHybrid && exactResults.length > 0) {
-        return { ...phraseEntry, span, strategy: "exact-lookup", matches: exactResults };
+        traceStep(trace, { kind: "app", role: "decision", label: "Decision", outcome: "ok", detail: "Lexical mode and the exact lookup found matches — they are used directly; no further search runs." });
+        return done({ ...phraseEntry, span, strategy: "exact-lookup", matches: exactResults });
       }
     } catch (error) {
       if (!isQueryTimeoutError(error)) {
@@ -1783,25 +1830,37 @@ async function resolvePhrase(
           conceptIdScope,
           textIndex,
           searchConfig: getSearchConfig(),
-          hybridConfig: {
-            ...hybridCfg,
-            candidatePool: hybridCfg.groundingCandidatePool,
-            rerankPool: hybridCfg.groundingCandidatePool
-          },
-          limit: Math.max(perPhraseLimit * 3, 8)
+          hybridConfig: hybridCfg,
+          limit: Math.max(perPhraseLimit * 3, 8),
+          trace
         });
         const hybridMatches = (hybrid.results || []).map(normalizeHybridMatch);
         // Exact lexical hits first (most precise), then fused/reranked semantic
         // candidates; the grounding scorer re-ranks the merged pool and applies
         // its negation/laterality/over-specific safeguards.
-        const merged = mergeCandidatesByConcept(exactResults, hybridMatches);
+        // An exact hit that hybrid also found keeps its lexical scoring but
+        // picks up the hybrid provenance, so the UI can show its fusion breakdown.
+        const hybridById = new Map(hybridMatches.map((m) => [String(m.conceptId), m]));
+        const exactWithProvenance = exactResults.map((r) => {
+          const h = hybridById.get(String(r.conceptId));
+          return h ? { ...r, foundBy: h.foundBy, fusion: h.fusion, fusedRank: h.fusedRank, rerankScore: h.rerankScore } : r;
+        });
+        const merged = mergeCandidatesByConcept(exactWithProvenance, hybridMatches);
+        traceStep(trace, {
+          kind: "app",
+          role: "merge",
+          label: "Merge exact hits with hybrid candidates",
+          outcome: "ok",
+          detail: `${exactResults.length} exact hit(s) first, then ${hybridMatches.length} hybrid candidate(s); duplicates collapse to one row per concept → ${merged.length} candidates for the grounding scorer.`,
+          rows: merged.length
+        });
         if (merged.length > 0) {
-          return {
+          return done({
             ...phraseEntry,
             span,
             strategy: hybrid.reranked ? "hybrid-rerank" : "hybrid-fusion",
             matches: merged
-          };
+          });
         }
       } catch (error) {
         if (!isQueryTimeoutError(error)) {
@@ -1810,13 +1869,18 @@ async function resolvePhrase(
       }
     }
 
+    if (useHybrid && shouldSkipSearchFallback(phraseEntry)) {
+      traceStep(trace, { kind: "app", role: "decision", label: "Decision", outcome: "skipped", detail: "Hybrid search skipped: the phrase is too short or too weak a clinical signal to search broadly." });
+    }
+
     // Hybrid disabled/skipped/empty: fall back to exact hits if any.
     if (exactResults.length > 0) {
-      return { ...phraseEntry, span, strategy: "exact-lookup", matches: exactResults };
+      return done({ ...phraseEntry, span, strategy: "exact-lookup", matches: exactResults });
     }
 
     if (shouldSkipSearchFallback(phraseEntry)) {
-      return {
+      traceStep(trace, { kind: "app", role: "decision", label: "Decision", outcome: "skipped", detail: "No exact match, and the phrase is too short or weak for a broad search — left unmapped." });
+      return done({
         ...phraseEntry,
         span: {
           start: phraseEntry.start,
@@ -1825,16 +1889,28 @@ async function resolvePhrase(
         },
         strategy: "skipped-anchor",
         matches: []
-      };
+      });
     }
 
-    const rawResults = await collection.aggregate(searchPipeline, { maxTimeMS: searchTimeoutMs }).toArray();
+    const rawResults = await tracedAggregate(collection, searchPipeline, { maxTimeMS: searchTimeoutMs }, trace, {
+      role: "lexical-search",
+      label: "Broad lexical search — MongoDB Search",
+      params: { variants: buildSearchQueryVariants(phraseEntry.phrase) }
+    });
     const results = rerankNavigatorResults({
       query: phraseEntry.phrase,
       results: rawResults,
       limit: perPhraseLimit
     });
-    return {
+    traceStep(trace, {
+      kind: "app",
+      role: "lexical-tiering",
+      label: "Match tiering (in the app)",
+      outcome: "ok",
+      detail: `Classified ${rawResults.length} hits by how they matched and kept the best ${results.length}.`,
+      rows: results.length
+    });
+    return done({
       ...phraseEntry,
       span: {
         start: phraseEntry.start,
@@ -1843,10 +1919,10 @@ async function resolvePhrase(
       },
       strategy: "mongodb-search",
       matches: results
-    };
+    });
   } catch (error) {
     if (isQueryTimeoutError(error)) {
-      return {
+      return done({
         ...phraseEntry,
         span: {
           start: phraseEntry.start,
@@ -1856,7 +1932,7 @@ async function resolvePhrase(
         strategy: "mongodb-timeout",
         matches: [],
         error: error instanceof Error ? error.message : String(error)
-      };
+      });
     }
 
     throw error;
@@ -1879,6 +1955,10 @@ export async function POST(request) {
     // "hybrid" forces hybrid fusion, "lexical" forces deterministic lexical,
     // anything else keeps the configured default.
     const searchModeOverride = body.searchMode === "hybrid" ? true : body.searchMode === "lexical" ? false : undefined;
+    // Optional session tuning for hybrid grounding (weights, fusion mode,
+    // pools, rerank) — the same knobs as the navigator search.
+    const hybridConfig = groundingHybridConfig(getHybridSearchConfig(), body.tuning);
+    const usesHybridGrounding = typeof searchModeOverride === "boolean" ? searchModeOverride : hybridConfig.groundingEnabled;
     const forceScopeRefresh = body.forceScopeRefresh === true;
     const developerMode = body.developerMode === true;
     const maxPhrases = Math.min(Math.max(Number(body.maxPhrases) || 20, 1), 40);
@@ -1934,7 +2014,13 @@ export async function POST(request) {
       // The extraction model changes the output, so it must key the cache —
       // otherwise a per-model benchmark returns the first model's cached run.
       extractor: body.extractor === "deterministic" ? "deterministic" : "llm",
-      model: typeof body.model === "string" ? body.model.trim() : ""
+      model: typeof body.model === "string" ? body.model.trim() : "",
+      // Retrieval settings change the candidates, so they key the cache too —
+      // otherwise re-grounding with new weights would replay the old run.
+      extractOnly: body.extractOnly === true,
+      groundMentions: Array.isArray(body.groundMentions) ? buildFingerprint({ mentions: body.groundMentions }) : null,
+      searchMode: usesHybridGrounding ? "hybrid" : "lexical",
+      tuning: usesHybridGrounding ? describeHybridTuning(hybridConfig) : null
     });
 
     // Benchmark passes noCache so every cell is a real, timed call (a cache hit
@@ -2033,29 +2119,52 @@ export async function POST(request) {
           searchTimeoutMs,
           perPhraseLimit: profileSettings.perPhraseLimit,
           includeScoreDetails: developerMode,
-          hybridOverride: searchModeOverride
+          hybridOverride: searchModeOverride,
+          hybridConfig
         })
     );
 
     const timedOutPhrases = mapped.filter((item) => item.strategy === "mongodb-timeout").length;
-    const reviewedResults = mapped.map(buildReviewOutcome);
+    // The per-mention trace is returned once, in retrievalTraces below — keep it
+    // off the result entries so the payload doesn't carry every pipeline twice.
+    const reviewedResults = mapped.map(({ trace: _trace, ...entry }) => buildReviewOutcome(entry));
     const results = reviewedResults.map((entry, index) => ({
       ...entry,
       mentionId: buildMentionId(entry, index)
     }));
 
-    // Retrieval-only run: also return the MQL pipeline used per mention, so the
-    // UI can show exactly what MongoDB queries the grounding ran.
-    const mqlByMention = Array.isArray(body.groundMentions)
+    // Retrieval-only run: return, per mention, the exact sequence of steps
+    // retrieval ran — every MongoDB pipeline as sent, plus the app-side steps
+    // (tiering, fusion, rerank, merge, grounding scorer) — so the UI can show
+    // and explain how each mention was resolved. Nothing here is rebuilt after
+    // the fact.
+    const retrievalTraces = Array.isArray(body.groundMentions)
       ? results.map((r, i) => {
-        const pe = candidatePhrases[i];
+        const steps = Array.isArray(mapped[i]?.trace) ? [...mapped[i].trace] : [];
+        if (steps.length > 0) {
+          const top = r.topCandidate;
+          steps.push({
+            kind: "app",
+            role: "grounding-scorer",
+            label: "Grounding scorer (in the app)",
+            outcome: top ? "ok" : "skipped",
+            detail: top
+              ? `Re-ranked the candidates for this mention's context (negation, laterality, over-specific terms, semantic tag) and picked “${top.term}” (#${top.conceptId}) — status: ${r.status}.`
+              : `No candidate survived — status: ${r.status}.`,
+            rows: (r.topCandidate ? 1 : 0) + (r.alternatives || []).length
+          });
+        }
         return {
           mentionId: r.mentionId,
-          phrase: pe?.phrase || "",
-          pipeline: buildNavigatorSearchPipeline({ query: pe?.phrase || "", limit: profileSettings.perPhraseLimit, indexName: textIndex, languageCode, releaseId: effectiveReleaseId, areaConceptId, conceptIdScope })
+          phrase: candidatePhrases[i]?.phrase || r.phrase || "",
+          collection: projectionCollection,
+          strategy: r.strategy,
+          status: r.status,
+          steps
         };
       })
       : null;
+
 
     const evidenceGraph = buildEvidenceGraph({
       documentId: requestFingerprint,
@@ -2074,11 +2183,12 @@ export async function POST(request) {
         groundedNodeId: mention?.groundedNodeId || null
       };
     });
-    const principalDiagnosisCandidates = computePrimaryDiagnosisCandidates(resultsWithGraph, {
+    const diagnosisProposal = computeDiagnosisProposal(resultsWithGraph, {
       targetContext,
       limit: 3
     });
-    const principalDiagnosis = principalDiagnosisCandidates[0] || null;
+    const principalDiagnosisCandidates = diagnosisProposal.candidates;
+    const principalDiagnosis = diagnosisProposal.principal;
     const acceptedCount = resultsWithGraph.filter((item) => item.status === "accepted").length;
     const reviewCount = resultsWithGraph.filter((item) => item.status === "review").length;
     const abstainCount = resultsWithGraph.filter((item) => item.status === "abstain").length;
@@ -2117,12 +2227,24 @@ export async function POST(request) {
         searchTimeoutMs,
         latencyMs
       },
+      retrieval: {
+        searchMode: usesHybridGrounding ? "hybrid" : "lexical",
+        tuning: usesHybridGrounding ? describeHybridTuning(hybridConfig) : null,
+        strategies: countBy(mapped.map((item) => item.strategy))
+      },
       results: resultsWithGraph,
       evidenceGraph,
       principalDiagnosis,
       principalDiagnosisCandidates,
+      comorbidities: diagnosisProposal.comorbidities,
+      presentingSymptoms: diagnosisProposal.symptoms,
+      historicalDiagnoses: diagnosisProposal.history,
+      suspectedDiagnoses: diagnosisProposal.suspected,
+      // How the proposal was built: rules/weights applied, this note's ranking
+      // with per-mention score parts, and the mentions left out (and why).
+      diagnosisExplanation: diagnosisProposal.explanation,
       retrieved: true,
-      mql: mqlByMention,
+      retrievalTraces,
       degraded: timedOutPhrases > 0,
       cache: {
         fingerprint: requestFingerprint,

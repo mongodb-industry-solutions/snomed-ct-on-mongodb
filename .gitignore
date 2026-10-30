@@ -59,7 +59,7 @@ dotenv.*.local
 *.pfx
 
 # Node / Next.js build output
-node_modules/
+node_modules
 **/node_modules/
 .next/
 .next*/

@@ -1,6 +1,7 @@
 import { getCollection } from "@/lib/mongo";
 import { getMongoConfig, getLlmConfig } from "@/lib/config";
-import { goldFacts, goldExpectedConcepts } from "@/lib/gold-notes";
+import { publicLlmConfig } from "@/lib/llm-models";
+import { goldFacts, goldExpectedConcepts, goldDiagnosisSummary } from "@/lib/gold-notes";
 import { getAllGoldNotes } from "@/lib/gold-store";
 import { ok, fail, parseJson, elapsedMs } from "@/lib/http";
 
@@ -16,6 +17,11 @@ export const dynamic = "force-dynamic";
 // A separate RETRIEVAL axis reports whether the extracted mentions resolve to the
 // expected SNOMED concepts under the chosen search mode (lexical / hybrid) — that
 // measures MongoDB retrieval, holding extraction constant.
+//
+// A DIAGNOSIS axis scores the note-level proposal against the coder's summary:
+// is the proposed principal the gold principal (top-1, and within the top 3),
+// and do the proposed comorbidities match the gold ones (precision / recall).
+// Both use the same hierarchy-aware match as retrieval.
 
 // Per-cell timeout. Large notes on slow/reasoning models can take 30-60s+;
 // default 2 min so genuine runs aren't cut off. Override with env if needed.
@@ -67,6 +73,42 @@ function polarity(assertion) {
 }
 function mean(arr) { return arr.length ? arr.reduce((s, x) => s + x, 0) / arr.length : 0; }
 
+// Score a note's diagnosis proposal against the coder's summary. `matches(id,
+// ids)` is the hierarchy-aware match: the gold concept, an ancestor, or a
+// descendant of it all count, so a release-specific code choice isn't a miss.
+async function scoreDiagnosis(gold, data, matches) {
+  if (!gold) return null;
+  const candidates = (data.principalDiagnosisCandidates || []).map((c) => String(c.conceptId));
+  const proposedPrincipal = data.principalDiagnosis ? String(data.principalDiagnosis.conceptId) : null;
+  const proposedComorbidities = (data.comorbidities || []).map((c) => String(c.conceptId));
+
+  const principalTop1 = proposedPrincipal && await matches(gold.principal.conceptId, [proposedPrincipal]) ? 1 : 0;
+  const principalTop3 = candidates.length && await matches(gold.principal.conceptId, candidates.slice(0, 3)) ? 1 : 0;
+
+  const expected = gold.comorbidities.map((c) => String(c.conceptId));
+  let found = 0;
+  for (const id of expected) if (await matches(id, proposedComorbidities)) found += 1;
+  let correct = 0;
+  for (const id of proposedComorbidities) {
+    // A proposed comorbidity is correct when it matches a gold comorbidity. One
+    // that matches the gold principal instead is a principal/secondary swap.
+    for (const exp of expected) { if (await matches(exp, [id])) { correct += 1; break; } }
+  }
+  return {
+    principalTop1,
+    principalTop3,
+    // Empty gold list + empty proposal is a perfect answer, not undefined.
+    comorbidityRecall: expected.length ? found / expected.length : 1,
+    comorbidityPrecision: proposedComorbidities.length ? correct / proposedComorbidities.length : (expected.length ? 0 : 1),
+    gold: { principal: gold.principal, comorbidities: gold.comorbidities },
+    proposed: {
+      principal: data.principalDiagnosis ? { conceptId: String(data.principalDiagnosis.conceptId), term: data.principalDiagnosis.term } : null,
+      candidates: (data.principalDiagnosisCandidates || []).map((c) => ({ conceptId: String(c.conceptId), term: c.term, score: c.score })),
+      comorbidities: (data.comorbidities || []).map((c) => ({ conceptId: String(c.conceptId), term: c.term }))
+    }
+  };
+}
+
 export async function POST(request) {
   const startedAt = process.hrtime.bigint();
   try {
@@ -75,6 +117,9 @@ export async function POST(request) {
     const requested = Array.isArray(body?.models) ? body.models.filter((m) => llm.models.includes(m)) : [];
     const models = requested.length ? requested : llm.models;
     const searchMode = SEARCH_MODES.has(body?.searchMode) ? body.searchMode : "lexical";
+    // Session hybrid tuning, forwarded to every grounding call so a hybrid
+    // benchmark measures the same fusion settings the user searches with.
+    const tuning = searchMode === "hybrid" && body?.tuning && typeof body.tuning === "object" ? body.tuning : null;
 
     const ALL_GOLD = await getAllGoldNotes();
     const goldSummary = ALL_GOLD.map((g) => ({
@@ -84,7 +129,7 @@ export async function POST(request) {
       conceptCount: goldExpectedConcepts(g).length
     }));
     if (body?.metaOnly) {
-      return ok({ ok: true, availableModels: llm.models, goldNotes: goldSummary, latencyMs: elapsedMs(startedAt) });
+      return ok({ ok: true, ...publicLlmConfig(llm), goldNotes: goldSummary, latencyMs: elapsedMs(startedAt) });
     }
 
     const noteIds = Array.isArray(body?.noteIds) && body.noteIds.length ? body.noteIds.map(String) : null;
@@ -118,7 +163,7 @@ export async function POST(request) {
         const res = await fetch(`${origin}/api/nlp-map`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ text: note.text, languageCode: note.languageCode, model, searchMode, searchTimeoutMs: 12000, noCache: true, includeLlmIO: true }),
+          body: JSON.stringify({ text: note.text, languageCode: note.languageCode, model, searchMode, ...(tuning ? { tuning } : {}), searchTimeoutMs: 12000, noCache: true, includeLlmIO: true }),
           signal: controller.signal
         });
         data = await res.json().catch(() => ({}));
@@ -206,11 +251,19 @@ export async function POST(request) {
       // are controlled scope gaps, reported separately, not counted as failures.
       const retrievalRecall = inScopeCount ? retHits / inScopeCount : null;
 
+      // ── Diagnosis axis: principal + comorbidities vs the coder's summary. ──
+      const diagnosis = await scoreDiagnosis(goldDiagnosisSummary(note), data, (expectedId, ids) => subsumes(source, expectedId, ids, cache));
+
       return {
         noteId: note.id, scored: true, extractor,
         detection, assertionAcc, subjectAcc, graphRecall, precision, evidenceComposite,
         extraMentions, factCount: facts.length,
         retrievalRecall, retrievalHits, expectedConceptCount: expectedConcepts.length, inScopeCount, outOfScopeCount,
+        diagnosis,
+        principalTop1: diagnosis?.principalTop1 ?? null,
+        principalTop3: diagnosis?.principalTop3 ?? null,
+        comorbidityPrecision: diagnosis?.comorbidityPrecision ?? null,
+        comorbidityRecall: diagnosis?.comorbidityRecall ?? null,
         factHits, mentions,
         llmPrompt: data.extractorPrompt || null,
         llmRaw: data.extractorRaw || null,
@@ -237,6 +290,10 @@ export async function POST(request) {
         subjectAcc: avg((n) => n.subjectAcc),
         precision: avg((n) => n.precision),
         retrievalRecall: avg((n) => n.retrievalRecall),
+        principalTop1: avg((n) => n.principalTop1),
+        principalTop3: avg((n) => n.principalTop3),
+        comorbidityPrecision: avg((n) => n.comorbidityPrecision),
+        comorbidityRecall: avg((n) => n.comorbidityRecall),
         tokens: notes.reduce((a, n) => a + (n.tokens || 0), 0),
         tokensPerNote,
         avgLatencyMs: notes.length ? Math.round(notes.reduce((a, n) => a + (n.ms || 0), 0) / notes.length) : 0,
@@ -261,6 +318,7 @@ export async function POST(request) {
       enabled: llm.enabled,
       availableModels: llm.models,
       searchMode,
+      tuning,
       goldNotes: goldSummary,
       models: perModel,
       recommended,
