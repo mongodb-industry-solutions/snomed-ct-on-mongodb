@@ -775,5 +775,14 @@ code, pre { font-family: var(--font-mono); }
   border: none;
 }
 .appSidebar .sidebarStats .sidebarStat { display: none; }
+/* The wrapper is the single sticky element, so the nav can't cover the header. */
+.appTopChrome {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  width: 100%;
+}
+.appTopChrome .appSidebar,
+.appTopChrome .appHeader { position: static; }
 .appHeader { width: 100%; }
 .appMain { width: 100%; }

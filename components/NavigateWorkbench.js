@@ -6,6 +6,8 @@ import Badge from "@leafygreen-ui/badge";
 const Code = dynamic(() => import("@leafygreen-ui/code"), { ssr: false });
 import ConceptHierarchyFlow from "@/components/ConceptHierarchyFlow";
 import ConceptBrowser from "@/components/ConceptBrowser";
+import MappingPanel from "@/components/MappingPanel";
+import { FusionBreakdown, FusionSummary, HybridTuningPanel, tuningOverrides } from "@/components/HybridTuning";
 
 // Search & Navigate, three states:
 //  1) Landing  — a centered search box + suggestions (search-engine style).
@@ -155,7 +157,9 @@ function normalizeText(value) {
   return String(value || "").toLowerCase().trim();
 }
 
-export default function NavigateWorkbench({ defaultLanguageCode = "en", seed = null }) {
+// `hybridTuning` is the session-wide fusion tuning owned by DemoWorkbench
+// ({ tuning, setTuning, defaults }), shared with Ground a Note and the benchmark.
+export default function NavigateWorkbench({ defaultLanguageCode = "en", seed = null, hybridTuning = null }) {
   const [languageCode, setLanguageCode] = useState(defaultLanguageCode || "auto");
   const [mode, setMode] = useState("hybrid");
   const [query, setQuery] = useState("");
@@ -165,6 +169,9 @@ export default function NavigateWorkbench({ defaultLanguageCode = "en", seed = n
   const [searchMeta, setSearchMeta] = useState({ scope: null, stats: null, releaseId: "" });
   const [scopeWarmup, setScopeWarmup] = useState({ active: false, slow: false, expression: "" });
   const [queryPlanOpen, setQueryPlanOpen] = useState(false);
+  const tuning = hybridTuning?.tuning || null;
+  const tuningDefaults = hybridTuning?.defaults || null;
+  const [tuningOpen, setTuningOpen] = useState(false);
   const [scopeOpen, setScopeOpen] = useState(false);
   const [scope, setScope] = useState({ areaConceptId: "", ecl: "" });
   const [expandedScopedExampleId, setExpandedScopedExampleId] = useState("");
@@ -181,6 +188,8 @@ export default function NavigateWorkbench({ defaultLanguageCode = "en", seed = n
   const [tagFilter, setTagFilter] = useState("all");
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [focusTab, setFocusTab] = useState("graph");
+  const [graphLevels, setGraphLevels] = useState(2);
+  const [graphExpansion, setGraphExpansion] = useState({ loading: false, error: "", result: null, pipeline: null });
   const [inspectorTab, setInspectorTab] = useState("summary");
   const [history, setHistory] = useState({ loading: false, error: "", items: [] });
   const [valueSet, setValueSet] = useState({ loading: false, error: "", members: [], total: 0 });
@@ -217,6 +226,7 @@ export default function NavigateWorkbench({ defaultLanguageCode = "en", seed = n
     }
     const requested = lang || languageCode;
     const effectiveLang = requested === "auto" ? detectLanguage(text) : requested;
+    const overrides = tuningOverrides(tuning, tuningDefaults);
     try {
       const res = await fetch("/api/navigator-search", {
         method: "POST",
@@ -227,7 +237,8 @@ export default function NavigateWorkbench({ defaultLanguageCode = "en", seed = n
           mode: searchMode,
           limit: 24,
           ...(areaConceptId ? { areaConceptId } : {}),
-          ...(ecl ? { ecl } : {})
+          ...(ecl ? { ecl } : {}),
+          ...(searchMode === "hybrid" && overrides ? { tuning: overrides } : {})
         })
       });
       const data = await res.json();
@@ -248,7 +259,7 @@ export default function NavigateWorkbench({ defaultLanguageCode = "en", seed = n
       if (scopeTimer) window.clearTimeout(scopeTimer);
       setScopeWarmup({ active: false, slow: false, expression: "" });
     }
-  }, [languageCode, mode, scope.areaConceptId, scope.ecl]);
+  }, [languageCode, mode, scope.areaConceptId, scope.ecl, tuning, tuningDefaults]);
 
   const resetStagedSearch = useCallback((nextMode = mode) => {
     setSubmitted("");
@@ -290,6 +301,7 @@ export default function NavigateWorkbench({ defaultLanguageCode = "en", seed = n
   const openConcept = useCallback(async (conceptId, lang) => {
     const id = String(conceptId || "").trim();
     if (!id) return;
+    setGraphExpansion({ loading: false, error: "", result: null, pipeline: null });
     setConcept({ conceptId: id });
     setConceptState({ loading: true, error: "" });
     setInspectorOpen(true);
@@ -313,6 +325,19 @@ export default function NavigateWorkbench({ defaultLanguageCode = "en", seed = n
       setConceptState({ loading: false, error: error?.message || "Concept load failed" });
     }
   }, [languageCode, submitted, query]);
+
+  const expandGraph = async () => {
+    const id = concept?.conceptId;
+    if (!id) return;
+    setGraphExpansion({ loading: true, error: "", result: null, pipeline: null });
+    try {
+      const response = await fetch("/api/graph-neighborhood", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ conceptId: id, levels: graphLevels, languageCode: effectiveLanguage, releaseId: concept.releaseId }) });
+      const data = await response.json();
+      if (!response.ok || data.ok === false) throw new Error(data.error || "Graph expansion failed");
+      setGraphExpansion({ loading: false, error: "", result: data.result, pipeline: data.pipeline });
+    } catch (error) { setGraphExpansion({ loading: false, error: error.message, result: null, pipeline: null }); }
+  };
 
   // Seed a concept from another tab (e.g. grounding "open in navigate").
   useEffect(() => {
@@ -441,6 +466,7 @@ export default function NavigateWorkbench({ defaultLanguageCode = "en", seed = n
                 { key: "hierarchy", label: "Hierarchy" },
                 { key: "table", label: "Table" },
                 { key: "relationships", label: `Relationships${concept.relationshipCount ? ` (${concept.relationshipCount})` : ""}` },
+                { key: "mappings", label: "Mappings" },
                 { key: "api", label: "API" }
               ].map((t) => (
                 <button key={t.key} type="button" onClick={() => setFocusTab(t.key)}
@@ -450,12 +476,23 @@ export default function NavigateWorkbench({ defaultLanguageCode = "en", seed = n
 
             {focusTab === "graph" ? (
               <>
-                <ConceptHierarchyFlow concept={concept} onNavigate={(id) => openConcept(id)} />
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+                  <label style={{ fontSize: 12 }}>Ancestor levels <select aria-label="Ancestor levels" value={graphLevels} onChange={(e) => setGraphLevels(Number(e.target.value))} style={chip}>
+                    {[1, 2, 3, 4, 5].map((level) => <option key={level} value={level}>{level}</option>)}
+                  </select></label>
+                  <button type="button" style={chipActive} disabled={graphExpansion.loading || conceptState.loading} onClick={expandGraph}>{graphExpansion.loading ? "Expanding…" : "Explore ancestors"}</button>
+                  {graphExpansion.result ? <button type="button" style={chip} onClick={() => setGraphExpansion({ loading: false, error: "", result: null, pipeline: null })}>Immediate neighborhood</button> : null}
+                </div>
+                {graphExpansion.error ? <p style={errBox}>{graphExpansion.error}</p> : null}
+                <ConceptHierarchyFlow concept={concept} neighborhood={graphExpansion.result} onNavigate={(id) => openConcept(id)} />
                 <p style={{ ...sub, marginTop: 8 }}>
-                  Rendered from precomputed <code>parentIds</code> / <code>ancestorIds</code> arrays on the concept document — no graph engine required for navigation or subsumption.
+                  {graphExpansion.result ? "Expanded through the SNOMED parent graph. Click any ancestor to explore its neighborhood." : "Immediate parents and children. Explore more ancestor levels, or click a neighboring concept to navigate."}
                 </p>
+                {graphExpansion.pipeline ? <details style={{ fontSize: 12 }}><summary style={{ cursor: "pointer", color: GREEN }}>Show graph query</summary><Code language="javascript">{JSON.stringify(graphExpansion.pipeline, null, 2)}</Code></details> : null}
               </>
             ) : null}
+
+            {focusTab === "mappings" && !conceptState.loading ? <MappingPanel key={concept.conceptId} concept={concept} /> : null}
 
             {focusTab === "hierarchy" ? (
               <ConceptBrowser
@@ -605,7 +642,9 @@ export default function NavigateWorkbench({ defaultLanguageCode = "en", seed = n
                 <div style={{ display: "grid", gap: 6 }}>
                   <DescRow label="Preferred term" value={concept.preferredTerm} />
                   <DescRow label="Fully specified name" value={concept.fullySpecifiedName} />
-                  {synonyms.map((s, i) => <DescRow key={i} label="Synonym" value={s} />)}
+                  {(concept.descriptions || []).filter((d) => d.languageCode === effectiveLanguage && d.kind !== "fsn" && d.term !== concept.preferredTerm).map((d, i) =>
+                    <DescRow key={d.descriptionId || i} label={d.kind === "definition" ? "Text definition" : d.kind === "synonym" ? "Synonym" : "Description"} value={d.term} />)}
+                  {!concept.descriptions ? synonyms.map((s, i) => <DescRow key={i} label="Synonym" value={s} />) : null}
                 </div>
               ) : null}
 
@@ -700,6 +739,18 @@ export default function NavigateWorkbench({ defaultLanguageCode = "en", seed = n
           onSubmit={() => runSearch(query, languageCode)}
         />
         <ModeToggle mode={mode} setMode={setMode} />
+        {mode === "hybrid" && tuning ? (
+          <HybridTuningPanel
+            open={tuningOpen}
+            setOpen={setTuningOpen}
+            tuning={tuning}
+            setTuning={hybridTuning.setTuning}
+            defaults={tuningDefaults}
+            scopeNote="Session-wide: these settings also apply to hybrid retrieval in Ground a Note and to hybrid benchmark runs."
+            canRerun={Boolean(submitted) && !searchState.loading}
+            onRerun={() => runSearch(submitted, languageCode, "hybrid")}
+          />
+        ) : null}
         <ScopeControls
           open={scopeOpen}
           setOpen={setScopeOpen}
@@ -755,6 +806,7 @@ export default function NavigateWorkbench({ defaultLanguageCode = "en", seed = n
               <strong>Term sidecar scope.</strong> Search runs over the projected term sidecar, not every RF2 description in the licensed source collection. This keeps the demo cluster responsive, but terms outside the projection can be missing or approximate; rebuild an area/full sidecar for production-like coverage.
             </p>
           ) : null}
+          <FusionSummary plan={searchMeta.queryPlan} />
           <AdvancedQueryPanel
             plan={searchMeta.queryPlan}
             open={queryPlanOpen}
@@ -769,9 +821,9 @@ export default function NavigateWorkbench({ defaultLanguageCode = "en", seed = n
               const matchedDiffers = matched && matched.toLowerCase() !== String(preferred).toLowerCase();
               return (
                 <button key={r.conceptId} type="button" style={cardBtn} onClick={() => openConcept(r.conceptId, languageCode)}>
-                  <div style={{ fontWeight: 700, color: INK }}>{matchedDiffers ? matched : preferred}</div>
+                  <div style={{ fontWeight: 700, color: INK }}>{preferred}</div>
                   {matchedDiffers ? (
-                    <div style={{ fontSize: 11, color: "#5C6C75", marginTop: 2 }}>Preferred: {preferred}</div>
+                    <div style={{ fontSize: 11, color: "#5C6C75", marginTop: 2 }}>Matched {r.typeId === "900000000000550004" ? "definition" : "description"}: {matched}</div>
                   ) : null}
                   <div style={{ fontSize: 11, color: "#5C6C75", marginTop: 4, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     {r.semanticTag ? <Badge variant="green">{r.semanticTag}</Badge> : null}
@@ -788,6 +840,7 @@ export default function NavigateWorkbench({ defaultLanguageCode = "en", seed = n
                     <span>#{r.conceptId}</span>
                   </div>
                   {r.fsn ? <div style={{ fontSize: 11, color: "#889397", marginTop: 6 }}>{r.fsn}</div> : null}
+                  <FusionBreakdown row={r} />
                 </button>
               );
             })}

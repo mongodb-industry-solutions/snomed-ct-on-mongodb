@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-07-07",
+  "updated": "2026-10-30",
   "exampleFile": ".env.example",
   "policy": {
     "envLocal": "Local only. Keep credentials, cluster endpoints, and machine-specific overrides out of git.",
@@ -194,7 +194,7 @@
       "category": "hybridSearch",
       "required": false,
       "secret": false,
-      "default": "rankFusion",
+      "default": "appRrf",
       "description": "Hybrid search fusion strategy."
     },
     "HYBRID_NATIVE_FUSION_MAX_TIME_MS": {
@@ -202,7 +202,7 @@
       "required": false,
       "secret": false,
       "default": "8000",
-      "description": "Timeout guard for native MongoDB fusion plans."
+      "description": "Bound an optional native fusion experiment before application-side fallback."
     },
     "HYBRID_CANDIDATE_POOL": {
       "category": "hybridSearch",
@@ -299,22 +299,22 @@
       "category": "llm",
       "required": false,
       "secret": false,
-      "default": "chat",
+      "default": "responses",
       "description": "Gateway API style: chat or responses."
     },
     "LLM_GROUNDING_MODEL": {
       "category": "llm",
       "required": false,
       "secret": false,
-      "default": "gpt-5.5",
+      "default": "gpt-5.4-mini",
       "description": "Default extraction/review model."
     },
     "LLM_GROUNDING_MODELS": {
       "category": "llm",
       "required": false,
       "secret": false,
-      "default": "gpt-5.5",
-      "description": "Server-side comma-separated benchmark/model-picker list."
+      "default": "gpt-5.4-mini,gpt-5.4,gpt-5.5",
+      "description": "Runtime server roster shared by the session model picker and benchmark. Use exact model IDs served by the gateway."
     },
     "LLM_GROUNDING_MAX_TOKENS": {
       "category": "llm",
@@ -322,13 +322,6 @@
       "secret": false,
       "default": "4096",
       "description": "Maximum LLM response tokens for structured grounding output."
-    },
-    "NEXT_PUBLIC_LLM_GROUNDING_MODELS": {
-      "category": "llm",
-      "required": false,
-      "secret": false,
-      "default": "gpt-5.5",
-      "description": "Browser-visible comma-separated model list."
     },
     "TERM_PROJECTION_SCOPE": {
       "category": "termProjection",
@@ -616,6 +609,27 @@
       "secret": false,
       "default": "15000",
       "description": "Search timeout for gold-note and benchmark scripts."
+    },
+    "HYBRID_LEXICAL_WEIGHT": {
+      "category": "hybridSearch",
+      "required": false,
+      "secret": false,
+      "default": "0.55",
+      "description": "Lexical contribution to reciprocal rank fusion."
+    },
+    "HYBRID_SEMANTIC_WEIGHT": {
+      "category": "hybridSearch",
+      "required": false,
+      "secret": false,
+      "default": "0.45",
+      "description": "Semantic contribution to reciprocal rank fusion."
+    },
+    "HYBRID_RERANK_ENABLED": {
+      "category": "hybridSearch",
+      "required": false,
+      "secret": false,
+      "default": "true",
+      "description": "Enable Voyage reranking after hybrid fusion when a key is configured."
     }
   }
 }

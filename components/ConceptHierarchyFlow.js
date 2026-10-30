@@ -1,149 +1,98 @@
 "use client";
-
-import { useMemo } from "react";
-import { ReactFlow, Background, Controls, MarkerType } from "@xyflow/react";
+import { useEffect, useMemo, useRef } from "react";
+import { ReactFlow, Background, Controls, MarkerType, useNodesInitialized, useNodesState, useReactFlow } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-// Concept neighborhood as an interactive is-a graph: immediate parents on top,
-// the selected concept in the center, children below. Renders the parents/
-// children the /api/hierarchy endpoint already returns, and clicking any
-// neighbor navigates to it — so SNOMED reads as the directed graph it is,
-// without a separate graph database.
-
-const CENTER_COLOR = "#00684A";
-const PARENT_COLOR = "#016BF8";
-const CHILD_COLOR = "#5C6C75";
-
-function clamp(text, max = 46) {
-  const t = String(text || "");
-  return t.length > max ? `${t.slice(0, max - 1)}…` : t;
+// Fit after asynchronous data and node measurements, and after inspector resize.
+function FitCompletedGraph({ revision, containerRef }) {
+  const initialized = useNodesInitialized();
+  const { fitView, viewportInitialized } = useReactFlow();
+  useEffect(() => {
+    if (!initialized || !viewportInitialized || !containerRef.current) return;
+    let frame;
+    const fit = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => fitView({ padding: 0.18, duration: 180, maxZoom: 1, minZoom: 0.05 }));
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(containerRef.current);
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
+  }, [initialized, viewportInitialized, revision, fitView, containerRef]);
+  return null;
 }
 
-function label(term, semanticTag, conceptId, weight = 600) {
-  return (
-    <div style={{ textAlign: "left", maxWidth: 170 }} title={term || conceptId}>
-      <div style={{ fontWeight: weight, fontSize: 12, lineHeight: 1.25 }}>{clamp(term || conceptId)}</div>
-      <div style={{ fontSize: 10, opacity: 0.7, marginTop: 2 }}>
-        {semanticTag ? `${semanticTag} · ` : ""}#{conceptId}
-      </div>
-    </div>
-  );
-}
+const fitViewOptions = { padding: 0.18, maxZoom: 1, minZoom: 0.05 };
 
-function rowLayout(items, y, canvasWidth) {
-  const gap = 210;
-  const totalWidth = Math.max((items.length - 1) * gap, 0);
-  const startX = canvasWidth / 2 - totalWidth / 2;
-  return items.map((item, i) => ({ item, x: startX + i * gap, y }));
-}
+function MeasuredHierarchyFlow({ layoutNodes, edges, revision, containerRef, onNavigate }) {
+  // React Flow reports measured sizes through onNodesChange. Retain those
+  // changes so useNodesInitialized becomes true and the completed graph fits.
+  const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
+  useEffect(() => { setNodes(layoutNodes); }, [layoutNodes, setNodes]);
 
-export default function ConceptHierarchyFlow({ concept, onNavigate }) {
+  return <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange}
+    fitView fitViewOptions={fitViewOptions} minZoom={0.05} maxZoom={1.5} proOptions={{ hideAttribution: true }}
+    nodesDraggable={false} nodesConnectable={false} onNodeClick={(_event, node) => {
+      if (node.data.navigateTo) onNavigate?.(node.data.navigateTo);
+    }}>
+    <FitCompletedGraph revision={revision} containerRef={containerRef} />
+    <Background gap={16} color="#eef1f3" /><Controls showInteractive={false} />
+  </ReactFlow>;
+}
+function nodeLabel(term, tag, id, selected) {
+  return <div style={{ textAlign: "left" }} title={term || id}>
+    <div style={{ fontWeight: selected ? 800 : 600, fontSize: 12, lineHeight: 1.3 }}>{term || id}</div>
+    <div style={{ fontSize: 10, opacity: 0.7, marginTop: 3 }}>{tag ? `${tag} · ` : ""}#{id}</div>
+  </div>;
+}
+export default function ConceptHierarchyFlow({ concept, neighborhood = null, onNavigate }) {
+  const containerRef = useRef(null);
   const { nodes, edges } = useMemo(() => {
-    if (!concept?.conceptId) return { nodes: [], edges: [] };
-
+    if (!concept?.conceptId || !(concept.preferredTerm || concept.term || concept.displayTerm || concept.fullySpecifiedName)) return { nodes: [], edges: [] };
     const centerId = String(concept.conceptId);
-    const centerTerm =
-      concept.preferredTerm || concept.term || concept.displayTerm || concept.fullySpecifiedName || centerId;
-    const tagMatch = /\(([^)]+)\)\s*$/.exec(concept.fullySpecifiedName || "");
-    const centerTag = concept.semanticTag || (tagMatch ? tagMatch[1] : null);
-    const parents = Array.isArray(concept.parents) ? concept.parents.slice(0, 6) : [];
-    const children = Array.isArray(concept.children) ? concept.children.slice(0, 8) : [];
-
-    const canvasWidth = Math.max(children.length, parents.length, 1) * 210 + 120;
+    const members = new Map([[centerId, { ...concept, term: concept.preferredTerm || concept.term || concept.displayTerm || concept.fullySpecifiedName, level: 0 }]]);
+    for (const parent of concept.parents || []) members.set(String(parent.conceptId), { ...parent, level: -1 });
+    for (const child of (concept.children || []).slice(0, 8)) members.set(String(child.conceptId), { ...child, level: 1 });
+    for (const neighbor of neighborhood?.neighbors || []) {
+      const id = String(neighbor.conceptId);
+      if (id !== centerId) members.set(id, { ...neighbor, level: -(Number(neighbor.depth) + 1) });
+    }
+    const rows = new Map();
+    for (const member of members.values()) {
+      if (!rows.has(member.level)) rows.set(member.level, []);
+      rows.get(member.level).push(member);
+    }
     const nodes = [];
-    const edges = [];
-
-    nodes.push({
-      id: centerId,
-      position: { x: canvasWidth / 2 - 90, y: 200 },
-      data: { label: label(centerTerm, centerTag, centerId, 800), navigable: false },
-      style: {
-        border: `2px solid ${CENTER_COLOR}`,
-        borderRadius: 12,
-        padding: 10,
-        background: "#E3FCEC",
-        width: 200,
-        boxShadow: `0 0 0 3px ${CENTER_COLOR}22`
-      },
-      sourcePosition: "top",
-      targetPosition: "bottom"
-    });
-
-    rowLayout(parents, 30, canvasWidth).forEach(({ item, x, y }) => {
-      const id = String(item.conceptId);
-      nodes.push({
-        id: `p-${id}`,
-        position: { x, y },
-        data: { label: label(item.term, item.semanticTag, id), navigateTo: id },
-        style: { border: `1px solid ${PARENT_COLOR}`, borderRadius: 10, padding: 8, background: "#fff", width: 190 },
-        sourcePosition: "bottom",
-        targetPosition: "bottom"
+    for (const [level, row] of rows) {
+      row.sort((a, b) => String(a.term || "").localeCompare(String(b.term || "")));
+      row.forEach((member, index) => {
+        const id = String(member.conceptId), selected = id === centerId;
+        const color = selected ? "#00684A" : level < 0 ? "#016BF8" : "#5C6C75";
+        nodes.push({ id, position: { x: (index - (row.length - 1) / 2) * 235, y: level * 165 },
+          data: { label: nodeLabel(member.term, member.semanticTag, id, selected), navigateTo: selected ? null : id },
+          style: { width: 210, minHeight: 65, padding: 10, border: `${selected ? 2 : 1}px solid ${color}`, borderRadius: 10,
+            background: selected ? "#E3FCEC" : "#fff", ...(selected ? { boxShadow: "0 0 0 3px #00684A22" } : {}) },
+          sourcePosition: "top", targetPosition: "bottom" });
       });
-      // center is-a parent
-      edges.push({
-        id: `e-c-${id}`,
-        source: centerId,
-        target: `p-${id}`,
-        label: "is a",
-        style: { stroke: PARENT_COLOR },
-        labelStyle: { fontSize: 9, fill: PARENT_COLOR },
-        markerEnd: { type: MarkerType.ArrowClosed, color: PARENT_COLOR }
-      });
-    });
-
-    rowLayout(children, 370, canvasWidth).forEach(({ item, x, y }) => {
-      const id = String(item.conceptId);
-      nodes.push({
-        id: `c-${id}`,
-        position: { x, y },
-        data: { label: label(item.term, item.semanticTag, id), navigateTo: id },
-        style: { border: `1px solid ${CHILD_COLOR}`, borderRadius: 10, padding: 8, background: "#fff", width: 190 },
-        sourcePosition: "top",
-        targetPosition: "top"
-      });
-      // child is-a center
-      edges.push({
-        id: `e-${id}-c`,
-        source: `c-${id}`,
-        target: centerId,
-        label: "is a",
-        style: { stroke: CHILD_COLOR },
-        labelStyle: { fontSize: 9, fill: CHILD_COLOR },
-        markerEnd: { type: MarkerType.ArrowClosed, color: CHILD_COLOR }
-      });
-    });
-
+    }
+    const edgeIds = new Set(), edges = [];
+    const connect = (child, parent) => {
+      child = String(child); parent = String(parent);
+      const id = `${child}-${parent}`;
+      if (!members.has(child) || !members.has(parent) || child === parent || edgeIds.has(id)) return;
+      edgeIds.add(id);
+      edges.push({ id, source: child, target: parent, label: "is a", style: { stroke: "#016BF8" },
+        labelStyle: { fontSize: 10, fill: "#016BF8" }, markerEnd: { type: MarkerType.ArrowClosed, color: "#016BF8" } });
+    };
+    for (const parent of concept.parents || []) connect(centerId, parent.conceptId);
+    for (const child of concept.children || []) connect(child.conceptId, centerId);
+    for (const member of members.values()) for (const parent of member.inferredParentIds || []) connect(member.conceptId, parent);
     return { nodes, edges };
-  }, [concept]);
-
-  if (nodes.length === 0) return null;
-
-  return (
-    <div style={{ height: 460, borderRadius: 12, overflow: "hidden", border: "1px solid var(--border, #e3e7ea)" }}>
-      <ReactFlow
-        key={concept?.conceptId || "graph"}
-        nodes={nodes}
-        edges={edges}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
-        onInit={(instance) => {
-          // The flex container often has no width on first paint, so the initial
-          // fitView is a no-op. Refit on the next frames once it has real size.
-          requestAnimationFrame(() => instance.fitView({ padding: 0.2 }));
-          setTimeout(() => instance.fitView({ padding: 0.2 }), 120);
-        }}
-        minZoom={0.2}
-        maxZoom={1.5}
-        proOptions={{ hideAttribution: true }}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        onNodeClick={(_event, node) => {
-          if (node?.data?.navigateTo) onNavigate?.(node.data.navigateTo);
-        }}
-      >
-        <Background gap={16} color="#eef1f3" />
-        <Controls showInteractive={false} />
-      </ReactFlow>
-    </div>
-  );
+  }, [concept, neighborhood]);
+  const revision = nodes.map((n) => `${n.id}:${n.position.x}:${n.position.y}`).join("|");
+  if (!nodes.length) return null;
+  return <div ref={containerRef} style={{ height: 460, borderRadius: 12, overflow: "hidden", border: "1px solid #e3e7ea" }}>
+    <MeasuredHierarchyFlow key={concept.conceptId} layoutNodes={nodes} edges={edges}
+      revision={revision} containerRef={containerRef} onNavigate={onNavigate} />
+  </div>;
 }

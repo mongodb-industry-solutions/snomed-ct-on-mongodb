@@ -6,7 +6,9 @@ import Badge from "@leafygreen-ui/badge";
 const Code = dynamic(() => import("@leafygreen-ui/code"), { ssr: false });
 import EvidenceFlow from "@/components/EvidenceFlow";
 import PromptPanel from "@/components/PromptPanel";
+import { FusionBreakdown, FusionSummary, HybridTuningPanel, tuningOverrides } from "@/components/HybridTuning";
 import { EXAMPLE_GROUPS } from "@/lib/example-notes";
+import { DiagnosisExplainer, RetrievalInspector } from "@/components/SearchInspector";
 
 // Map our semantic states to LeafyGreen Badge variants.
 function statusVariant(status) {
@@ -56,7 +58,7 @@ function statusColor(status) {
   return "#B8860B"; // review
 }
 
-export default function GroundWorkbench({ defaultLanguageCode = "en", sessionModel, onSessionModelChange }) {
+export default function GroundWorkbench({ defaultLanguageCode = "en", sessionModel, onSessionModelChange, hybridTuning = null }) {
   const [text, setText] = useState("");
   const [languageCode, setLanguageCode] = useState(defaultLanguageCode || "en");
   const [state, setState] = useState({ loading: false, error: "" });
@@ -65,6 +67,11 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
   const [groundingView, setGroundingView] = useState("graph");
   // Retrieval (Stage 2) runs separately from extraction (Stage 1).
   const [retrieval, setRetrieval] = useState({ running: false, error: "" });
+  // Stage 2 retrieval mode. Lexical is the measured default for grounding (the
+  // gold benchmark showed hybrid did not improve accuracy); hybrid uses the
+  // session's fusion tuning, shared with Navigation.
+  const [retrievalMode, setRetrievalMode] = useState("lexical");
+  const [tuningOpen, setTuningOpen] = useState(false);
   // The extraction model is the session model (chosen in the header). Fall back
   // to local state only if this component is used without a session model.
   const [localModel, setLocalModel] = useState(LLM_MODELS[0]);
@@ -105,6 +112,7 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
         sentence: r.sentence || "",
         assertion: r.assertion,
         subject: r.experiencer || "patient",
+        section: r.llmSection || r.section || "other",
         status: r.status,
         candidates: [r.topCandidate, ...(r.alternatives || [])].filter(Boolean).map((c) => ({
           conceptId: c.conceptId, term: c.term, semanticTag: c.semanticTag
@@ -121,7 +129,11 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
       const res = await fetch("/api/llm-ground", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ mentions, languageCode })
+        body: JSON.stringify({
+          mentions,
+          languageCode,
+          rankingHint: (resp?.principalDiagnosisCandidates || []).map((c) => ({ conceptId: c.conceptId, term: c.term }))
+        })
       });
       const data = await res.json();
       if (!res.ok || data?.ok === false) throw new Error(data?.error || `HTTP ${res.status}`);
@@ -158,8 +170,9 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
   };
 
   // Stage 2 — retrieve SNOMED candidates from MongoDB for the extracted mentions.
-  const runRetrieval = async () => {
+  const runRetrieval = async (mode = retrievalMode) => {
     if (!response || retrieval.running) return;
+    const overrides = mode === "hybrid" ? tuningOverrides(hybridTuning?.tuning, hybridTuning?.defaults) : null;
     const mentions = Array.isArray(response.mentions) ? response.mentions : [];
     const body = response._text || "";
     if (!mentions.length) { setRetrieval({ running: false, error: "No mentions to retrieve." }); return; }
@@ -168,7 +181,7 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
       const res = await fetch("/api/nlp-map", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: body, languageCode, groundMentions: mentions, searchTimeoutMs: 12000 })
+        body: JSON.stringify({ text: body, languageCode, groundMentions: mentions, searchTimeoutMs: 12000, searchMode: mode, ...(overrides ? { tuning: overrides } : {}) })
       });
       const data = await res.json();
       if (!res.ok || data?.ok === false) throw new Error(data?.error || `HTTP ${res.status}`);
@@ -294,13 +307,38 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
           <span style={{ ...sub, margin: 0 }}>
             <strong style={{ color: INK }}>Stage 1 done</strong> — {(response.mentions || []).length} mention{(response.mentions || []).length === 1 ? "" : "s"} extracted by the LLM. Stage 2 retrieves the SNOMED candidates from MongoDB Search / Vector Search.
           </span>
-          <button type="button" style={{ ...primaryBtn, marginLeft: "auto", padding: "8px 18px" }} disabled={retrieval.running} onClick={runRetrieval}>
+          <RetrievalModeToggle mode={retrievalMode} setMode={setRetrievalMode} disabled={retrieval.running} />
+          <button type="button" style={{ ...primaryBtn, padding: "8px 18px" }} disabled={retrieval.running} onClick={() => runRetrieval()}>
             {retrieval.running ? "Retrieving from MongoDB…" : "Retrieve SNOMED candidates"}
           </button>
+          {retrievalMode === "hybrid" && hybridTuning?.tuning ? (
+            <div style={{ width: "100%" }}>
+              <HybridTuningPanel
+                open={tuningOpen}
+                setOpen={setTuningOpen}
+                tuning={hybridTuning.tuning}
+                setTuning={hybridTuning.setTuning}
+                defaults={hybridTuning.defaults}
+                scopeNote="Session-wide: shared with Navigation. Grounding runs one hybrid search per mention, so it uses a smaller candidate/rerank pool unless you change those values here."
+              />
+            </div>
+          ) : null}
           {retrieval.running ? <span style={{ width: "100%", ...sub, marginTop: 4 }}>Running MongoDB Search / Vector Search queries for {(response.mentions || []).length} mentions…</span> : null}
           {retrieval.error ? <span style={{ color: "#DB3030", fontSize: 12, width: "100%" }}>{retrieval.error}</span> : null}
         </div>
-      ) : null}
+      ) : (
+        <RetrievalSummary
+          retrieval={response.retrieval}
+          running={retrieval.running}
+          error={retrieval.error}
+          mode={retrievalMode}
+          setMode={setRetrievalMode}
+          onRerun={(m) => runRetrieval(m)}
+          hybridTuning={hybridTuning}
+          tuningOpen={tuningOpen}
+          setTuningOpen={setTuningOpen}
+        />
+      )}
 
       {step === "extraction" ? (
         <>
@@ -327,7 +365,7 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
           ) : graph ? (
             <EvidenceFlow graph={graph} reviewRows={[]} selectedSpanId="" onSelectSpan={() => {}} />
           ) : <p style={sub}>No evidence graph.</p>}
-          <MqlPanel mql={response.mql} />
+          <RetrievalInspector traces={response.retrievalTraces} />
         </>
         )
       ) : null}
@@ -337,7 +375,10 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
         ) : (
         <>
           <SampleScopeNotice />
-          <ConceptsView results={results} principal={principal} llm={llm} onSave={runSave} saveState={save} languageCode={languageCode} />
+          {/* Remount when the LLM review lands so its concept and principal picks seed the worklist. */}
+          <ConceptsView key={llm.model ? `llm-${llm.model}-${llm.primaryConceptId}` : "rules"} results={results} principal={principal}
+            proposal={response} llm={llm} onSave={runSave} saveState={save} languageCode={languageCode} />
+          <DiagnosisExplainer explanation={response.diagnosisExplanation} llm={llm} principal={principal} />
           <GoldRecordPanel results={results} noteText={noteText} languageCode={languageCode} />
         </>
         )
@@ -350,6 +391,74 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
 }
 
 // ---- Step 1: deterministic extraction highlighting ----
+function RetrievalModeToggle({ mode, setMode, disabled }) {
+  return (
+    <div style={{ marginLeft: "auto", display: "inline-flex", border: `1px solid ${BORDER}`, borderRadius: 8, overflow: "hidden" }}
+      title="Lexical: MongoDB Search only (default, deterministic). Hybrid: MongoDB Search + Vector Search fused with the session tuning, optional Voyage rerank.">
+      {[{ key: "lexical", label: "Lexical" }, { key: "hybrid", label: "Hybrid" }].map((m) => (
+        <button key={m.key} type="button" disabled={disabled} onClick={() => setMode(m.key)}
+          style={{ padding: "6px 12px", fontSize: 12, border: "none", cursor: disabled ? "default" : "pointer",
+            background: m.key === mode ? GREEN : "#fff", color: m.key === mode ? "#fff" : INK, fontWeight: m.key === mode ? 700 : 500 }}>
+          {m.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// After Stage 2: what retrieval actually ran (mode, fusion settings, how many
+// mentions each strategy resolved), with a one-click re-run in either mode.
+function RetrievalSummary({ retrieval, running, error, mode, setMode, onRerun, hybridTuning, tuningOpen, setTuningOpen }) {
+  if (!retrieval) return null;
+  const t = retrieval.tuning;
+  const strategies = Object.entries(retrieval.strategies || {})
+    .map(([k, v]) => `${k} ${v}`)
+    .join(" · ");
+  const algorithm = t ? {
+    engine: t.fusionMode === "appRrf" ? "app-rrf" : `mongodb-${t.fusionMode}`,
+    method: t.fusionMode === "scoreFusion" ? "score fusion" : "weighted reciprocal rank fusion",
+    formula: t.fusionMode === "scoreFusion" ? "score = Σ weight × sigmoid(engine score)" : `score = Σ weight / (${t.fusionMode === "rankFusion" ? 60 : t.rrfK} + rank)`,
+    weights: { lexical: t.lexicalWeight, semantic: t.semanticWeight },
+    candidatePool: t.candidatePool,
+    rerank: { requested: t.rerank, applied: t.rerank, pool: t.rerankPool }
+  } : null;
+  return (
+    <div style={{ border: `1px solid ${BORDER}`, borderRadius: 10, background: "#fff", padding: "10px 12px", marginBottom: 14, display: "grid", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <strong style={{ color: INK, fontSize: 13 }}>Retrieval</strong>
+        <Badge variant={retrieval.searchMode === "hybrid" ? "blue" : "lightgray"}>{retrieval.searchMode}</Badge>
+        {strategies ? <span style={{ fontSize: 11.5, color: "#5C6C75" }}>per mention: {strategies}</span> : null}
+        <RetrievalModeToggle mode={mode} setMode={setMode} disabled={running} />
+        <button type="button" style={{ ...primaryBtn, padding: "6px 14px", fontSize: 12 }} disabled={running} onClick={() => onRerun(mode)}>
+          {running ? "Retrieving…" : `Re-run retrieval (${mode})`}
+        </button>
+      </div>
+      {algorithm ? (
+        <div style={{ fontSize: 11 }}>
+          <FusionSummary algorithm={algorithm} />
+          <div style={{ fontSize: 11, color: "#889397", marginTop: -6 }}>
+            Requested settings. Per mention, exact lexical hits are merged ahead of the fused candidates, and the grounding scorer then applies its negation / laterality / specificity checks — expand a mention's candidates to see each one's fusion breakdown.
+          </div>
+        </div>
+      ) : null}
+      {mode === "hybrid" && hybridTuning?.tuning ? (
+        <HybridTuningPanel
+          open={tuningOpen}
+          setOpen={setTuningOpen}
+          tuning={hybridTuning.tuning}
+          setTuning={hybridTuning.setTuning}
+          defaults={hybridTuning.defaults}
+          canRerun={!running}
+          onRerun={() => onRerun("hybrid")}
+          rerunLabel="Re-run retrieval"
+          scopeNote="Session-wide: shared with Navigation. Grounding runs one hybrid search per mention, so it uses a smaller candidate/rerank pool unless you change those values here."
+        />
+      ) : null}
+      {error ? <span style={{ color: "#DB3030", fontSize: 12 }}>{error}</span> : null}
+    </div>
+  );
+}
+
 function ExtractionView({ noteText, results, graph }) {
   const highlights = useMemo(() => {
     const hs = [];
@@ -579,7 +688,9 @@ function WorklistRow({ m, chosen, chooseConcept, isPrincipal, leading, trailing 
                       {cand.matchReason ? ` · ${cand.matchReason}` : ""}
                       {cand.matchedBy ? ` · ${cand.matchedBy}` : ""}
                       {Number.isFinite(cand.score) && cand.score ? ` · score ${Math.round(cand.score)}` : ""}
+                      {typeof cand.rerankScore === "number" ? ` · rerank ${cand.rerankScore.toFixed(2)}` : ""}
                     </div>
+                    <FusionBreakdown row={cand} />
                   </button>
                 );
               })}
@@ -592,7 +703,7 @@ function WorklistRow({ m, chosen, chooseConcept, isPrincipal, leading, trailing 
   );
 }
 
-function ReviewWorklist({ mentions, roleOf, chosen, chooseConcept, accepted, toggle, principalKey, setPrincipal, excludeReason, addConcept, languageCode }) {
+function ReviewWorklist({ mentions, rank = () => 0, pickDisagreement = null, roleOf, chosen, chooseConcept, accepted, toggle, principalKey, setPrincipal, excludeReason, addConcept, languageCode }) {
   const byRole = (role) => mentions.filter((m) => roleOf(m) === role);
   const diagnoses = byRole("diagnosis");
   const procedures = byRole("procedure");
@@ -600,7 +711,36 @@ function ReviewWorklist({ mentions, roleOf, chosen, chooseConcept, accepted, tog
   const family = byRole("family-history");
   const context = mentions.filter((m) => ["ruled-out", "planned"].includes(roleOf(m)));
   const principal = diagnoses.find((m) => m.key === principalKey) || null;
-  const secondary = diagnoses.filter((m) => m.key !== principalKey);
+
+  // Secondary diagnoses: one row per concept, and a concept already covered by
+  // a more specific coded concept on the same SNOMED branch is folded into it.
+  const conceptOf = (m) => m.candidates.find((c) => String(c.conceptId) === String(chosen[m.key])) || m.candidates[0] || {};
+  const codedIds = new Set([principal, ...diagnoses].filter(Boolean).map((m) => String(conceptOf(m).conceptId)));
+  const coveredBy = (m) => {
+    const id = String(conceptOf(m).conceptId);
+    return [principal, ...diagnoses].filter(Boolean).find((other) => other.key !== m.key
+      && String(conceptOf(other).conceptId) !== id
+      && (conceptOf(other).ancestorIds || []).map(String).includes(id)) || null;
+  };
+  const seenIds = new Set(principal ? [String(conceptOf(principal).conceptId)] : []);
+  const subsumed = [];
+  const secondary = diagnoses
+    .filter((m) => m.key !== principalKey)
+    .sort((a, b) => rank(a) - rank(b))
+    .filter((m) => {
+      const id = String(conceptOf(m).conceptId);
+      if (seenIds.has(id)) return false;
+      seenIds.add(id);
+      const parentOf = coveredBy(m);
+      if (parentOf && codedIds.has(String(conceptOf(parentOf).conceptId))) { subsumed.push({ m, by: parentOf }); return false; }
+      return true;
+    });
+  // A finding is usually a symptom the principal explains — shown, not coded by default.
+  const isFinding = (m) => ["finding", "hallazgo"].includes(String(conceptOf(m).semanticTag || "").toLowerCase());
+  const activeSecondary = secondary.filter((m) => m.assertion === "present" && !isFinding(m));
+  const symptomSecondary = secondary.filter((m) => m.assertion === "present" && isFinding(m));
+  const pastSecondary = secondary.filter((m) => m.assertion === "historical");
+  const suspectedSecondary = secondary.filter((m) => m.assertion === "suspected");
 
   const checkbox = (key, on) => (
     <button type="button" onClick={() => toggle(key)} aria-pressed={on} title={on ? "Included — click to exclude" : "Click to include"}
@@ -636,6 +776,12 @@ function ReviewWorklist({ mentions, roleOf, chosen, chooseConcept, accepted, tog
       </p>
 
       {sectionHead("Principal diagnosis", null, GREEN, "the main reason for the encounter")}
+      {pickDisagreement ? (
+        <p style={{ ...sub, margin: "0 0 6px", color: "#944F01" }}>
+          The scoring rules proposed <strong>{pickDisagreement.rule}</strong>; the LLM review proposed <strong>{pickDisagreement.llm}</strong>.
+          The LLM pick is shown — confirm which one is right.
+        </p>
+      ) : null}
       {box(
         principal
           ? row(principal, checkbox(principal.key, accepted[principal.key] !== false))
@@ -643,11 +789,38 @@ function ReviewWorklist({ mentions, roleOf, chosen, chooseConcept, accepted, tog
         "#F6FFF9"
       )}
 
-      {secondary.length > 0 ? (
+      {activeSecondary.length > 0 ? (
         <>
-          {sectionHead("Other diagnoses (comorbidities)", secondary.length, INK)}
-          {box(secondary.map((m) => row(m, checkbox(m.key, !!accepted[m.key]), makePrincipalBtn(m.key))))}
+          {sectionHead("Other diagnoses (comorbidities)", activeSecondary.length, INK, "active problems documented alongside the principal")}
+          {box(activeSecondary.map((m) => row(m, checkbox(m.key, !!accepted[m.key]), makePrincipalBtn(m.key))))}
         </>
+      ) : null}
+
+      {symptomSecondary.length > 0 ? (
+        <>
+          {sectionHead("Presenting symptoms", symptomSecondary.length, "#5C6C75", "usually explained by a diagnosis — code only if unexplained")}
+          {box(symptomSecondary.map((m) => row(m, checkbox(m.key, !!accepted[m.key]), makePrincipalBtn(m.key))))}
+        </>
+      ) : null}
+
+      {pastSecondary.length > 0 ? (
+        <>
+          {sectionHead("Past history", pastSecondary.length, "#5C6C75", "resolved or historical — include only if still relevant to care")}
+          {box(pastSecondary.map((m) => row(m, checkbox(m.key, !!accepted[m.key]))))}
+        </>
+      ) : null}
+
+      {suspectedSecondary.length > 0 ? (
+        <>
+          {sectionHead("Suspected", suspectedSecondary.length, "#944F01", "not confirmed — code only once confirmed")}
+          {box(suspectedSecondary.map((m) => row(m, checkbox(m.key, !!accepted[m.key]))))}
+        </>
+      ) : null}
+
+      {subsumed.length > 0 ? (
+        <p style={{ ...sub, margin: "8px 0 0" }}>
+          Covered by a more specific code: {subsumed.map(({ m, by }) => `${conceptOf(m).term} → ${conceptOf(by).term}`).join("; ")}.
+        </p>
       ) : null}
 
       {procedures.length > 0 ? (
@@ -755,28 +928,6 @@ function AddConceptSearch({ onAdd, languageCode = "en" }) {
 }
 
 // ---- Step 3: grounded concepts ----
-// The exact MongoDB aggregation pipelines retrieval ran, per mention — so the
-// query layer is transparent, not a black box behind "grounding".
-function MqlPanel({ mql }) {
-  const [open, setOpen] = useState(false);
-  const items = Array.isArray(mql) ? mql : [];
-  if (!items.length) return null;
-  return (
-    <details open={open} onToggle={(e) => setOpen(e.target.open)} style={{ marginTop: 14, border: `1px solid ${BORDER}`, borderRadius: 10, background: "#fbfdfc", padding: "10px 14px" }}>
-      <summary style={{ cursor: "pointer", fontWeight: 700, color: INK, fontSize: 13 }}>
-        MongoDB queries (MQL) — {items.length} pipeline{items.length === 1 ? "" : "s"} run by retrieval
-      </summary>
-      <p style={{ ...sub, margin: "8px 0" }}>The aggregation pipeline MongoDB ran to ground each mention (MongoDB Search over the term sidecar).</p>
-      {items.map((q, i) => (
-        <div key={i} style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: INK, marginBottom: 2 }}>“{q.phrase}”</div>
-          <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: 11, lineHeight: 1.45, color: INK, background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "10px 12px", margin: 0, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", maxHeight: 220, overflow: "auto" }}>{JSON.stringify(q.pipeline, null, 2)}</pre>
-        </div>
-      ))}
-    </details>
-  );
-}
-
 // Turn the current grounding into a gold-note fixture (evidence graph → facts),
 // shown as ready-to-paste JSON for lib/gold-notes.js. This closes the loop:
 // author the benchmark's ground truth from real, human-reviewed groundings.
@@ -848,7 +999,7 @@ function GoldRecordPanel({ results, noteText, languageCode = "en" }) {
   );
 }
 
-function ConceptsView({ results, principal, llm = {}, onSave, saveState = {}, languageCode = "en" }) {
+function ConceptsView({ results, principal, proposal = {}, llm = {}, onSave, saveState = {}, languageCode = "en" }) {
   const grounded = results.filter((r) => r.topCandidate);
   const llmByMention = llm.byMention || {};
   const VIOLET = "#8F4FBF";
@@ -924,17 +1075,41 @@ function ConceptsView({ results, principal, llm = {}, onSave, saveState = {}, la
   const CODEABLE_ROLES = ["diagnosis", "procedure", "medication"];
 
   const diagnosisMentions = mentions.filter((m) => roleOf(m) === "diagnosis");
-  // Default principal: the mention whose chosen concept is the suggested
-  // primary, else the first diagnosis (highest-ranked; mentions preserve order).
-  const suggestedPrimary = (llm.primaryConceptId && llm.primaryConceptId !== "none" ? String(llm.primaryConceptId) : null)
-    || (principal ? String(principal.conceptId) : null);
-  const defaultPrincipalKey = diagnosisMentions.find((m) => String(chosen[m.key]) === suggestedPrimary)?.key
-    || (diagnosisMentions[0]?.key || null);
+  // The scored ranking (section, assertion, evidence, hierarchy) orders the
+  // diagnoses; concepts it merged into a descendant point at that descendant.
+  const rankOf = new Map();
+  (proposal.principalDiagnosisCandidates || []).concat(proposal.comorbidities || [], proposal.historicalDiagnoses || [], proposal.suspectedDiagnoses || [])
+    .forEach((item, index) => {
+      if (!rankOf.has(String(item.conceptId))) rankOf.set(String(item.conceptId), index);
+      (item.mergedConcepts || []).forEach((merged) => {
+        if (!rankOf.has(String(merged.conceptId))) rankOf.set(String(merged.conceptId), index + 0.5);
+      });
+    });
+  const rank = (m) => rankOf.get(String(chosen[m.key])) ?? Number.MAX_SAFE_INTEGER;
+  // Only a present diagnosis can be principal — not past history or a suspicion.
+  const principalEligible = diagnosisMentions.filter((m) => m.assertion === "present").sort((a, b) => rank(a) - rank(b));
+  const ruleSuggestion = principal ? String(principal.conceptId) : null;
+  const llmSuggestion = llm.primaryConceptId && llm.primaryConceptId !== "none" ? String(llm.primaryConceptId) : null;
+  const suggestedPrimary = llmSuggestion || ruleSuggestion;
+  const defaultPrincipalKey = principalEligible.find((m) => String(chosen[m.key]) === suggestedPrimary)?.key
+    || (principalEligible[0]?.key || null);
   const [principalKey, setPrincipalKey] = useState(defaultPrincipalKey);
+  // When the two pickers disagree, the coder should see both rather than one
+  // silently overriding the other.
+  const pickDisagreement = llmSuggestion && ruleSuggestion && llmSuggestion !== ruleSuggestion
+    ? { rule: principal?.term || ruleSuggestion, llm: chosenCandidate(principalEligible.find((m) => String(chosen[m.key]) === llmSuggestion) || {})?.term || llmSuggestion }
+    : null;
 
   const [accepted, setAccepted] = useState(() => {
     const init = {};
-    mentions.forEach((m) => { init[m.key] = CODEABLE_ROLES.includes(roleOf(m)) && m.status === "accepted"; });
+    // Past history, suspected diagnoses and presenting symptoms start unticked:
+    // the coder opts them in.
+    const isFinding = (m) => ["finding", "hallazgo"].includes(String(chosenCandidate(m)?.semanticTag || "").toLowerCase());
+    mentions.forEach((m) => {
+      const role = roleOf(m);
+      init[m.key] = CODEABLE_ROLES.includes(role) && m.status === "accepted"
+        && (role !== "diagnosis" || (m.assertion === "present" && !isFinding(m)));
+    });
     if (defaultPrincipalKey) init[defaultPrincipalKey] = true;
     return init;
   });
@@ -1023,6 +1198,8 @@ function ConceptsView({ results, principal, llm = {}, onSave, saveState = {}, la
       ) : (
         <ReviewWorklist
           mentions={mentions}
+          rank={rank}
+          pickDisagreement={pickDisagreement}
           roleOf={roleOf}
           chosen={chosen}
           chooseConcept={chooseConcept}
