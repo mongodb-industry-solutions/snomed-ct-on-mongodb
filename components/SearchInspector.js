@@ -264,7 +264,7 @@ const BUCKET_LABEL = {
 const BUCKET_COLOR = { principal: "green", comorbidity: "blue", symptom: "lightgray", history: "yellow", suspected: "yellow", "not-a-diagnosis": "lightgray", unclassified: "lightgray" };
 const BUCKET_WHY = {
   principal: "Highest-scoring concept asserted as present.",
-  comorbidity: "Present, and a disorder or event — an active problem alongside the principal.",
+  comorbidity: "Present, and a disorder — an active problem alongside the principal.",
   symptom: "Present, but a finding — usually explained by a diagnosis, so not coded by default.",
   history: "Not present now: documented as past history.",
   suspected: "Not confirmed: documented as suspected.",
@@ -272,6 +272,7 @@ const BUCKET_WHY = {
   unclassified: "Scored, but neither present, historical nor suspected (e.g. negated) — not proposed in any list."
 };
 const EXCLUDED_WHY = {
+  "not-a-clinical-finding": "The code is not a clinical finding or disorder, so it cannot be a diagnosis.",
   "no-code": "No SNOMED code was grounded for this mention.",
   "inactive-concept": "The grounded concept is inactive in this release.",
   "not-the-patient": "The mention is about someone else (e.g. family history).",

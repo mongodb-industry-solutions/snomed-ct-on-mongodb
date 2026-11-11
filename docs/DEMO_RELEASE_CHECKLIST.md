@@ -53,3 +53,51 @@ No full licensed terminology release, mapping dataset, credentials or database d
 - A small benchmark scored the same diabetes gold note with `gpt-5.4-mini` and `claude-haiku-4-5`, without extractor fallback. This is an execution check, not a model-quality research result.
 
 The official [GPT-5.4 mini model documentation](https://developers.openai.com/api/docs/models/gpt-5.4-mini) confirms the model ID and supported API surfaces. The broader semantic interoperability workflow remains deferred in `SEMANTIC_INTEROPERABILITY_DEMO_PLAN.md`.
+
+## Staging promotion update — 11 November 2026
+
+The release PR targets `staging`. Drone deploys staging on a push to `staging`
+and production on a push to `main`; retain those two long-lived branches.
+The feature branch is temporary and must remain until its staging PR is merged.
+GitHub staging rules require one independent approval, approval of the last push,
+signed commits and resolved review threads. The author cannot approve this PR.
+After the staging deployment and checks below pass, promote with a separate
+`staging` → `main` PR. Keep the existing production branch name and pipeline.
+
+Diagnosis proposals and the reviewer worklist now accept only SNOMED clinical
+findings and disorders. Medication/substance, procedure, event, structure,
+observable and unknown types cannot become principal diagnoses or comorbidities.
+The guard also applies to optional LLM principal suggestions and candidate swaps.
+
+The existing review findings are addressed by restricting the new clinical-search
+route to `demo-hospital`, validating scalar graph/mapping version parameters,
+rejecting ambiguous Boolean plan nodes, and isolating synthetic identities and
+upserts by tenant. Existing default-tenant IDs stay unchanged. For legacy custom
+tenants, `notes:seed -- --dry-run` reports identities requiring migration; an
+ordinary seed writes the new namespace first, then removes only the matching
+old synthetic records in that tenant after the write succeeds. It does not
+recover records reassigned by an earlier seed; restore those from a backup.
+
+Before production approval, collect evidence using the actual deployed secrets:
+
+1. Run `npm run demo:verify` in both environments to confirm terminology coverage,
+   the pinned release, search/vector index readiness and synthetic coding ancestry.
+2. On staging, run `CLINICAL_QA_URL=http://127.0.0.1:8080 npm run notes:verify` and
+   check `/api/health`, `/api/readiness`, and `/api/llm-config`.
+3. Ground a mixed diagnosis/medication/procedure note in English and Spanish.
+   Check the principal/comorbidity groups, then swap a principal candidate to a
+   medication and verify it leaves the diagnosis group and loses principal status.
+   Check the six runtime models and run a small grounding benchmark.
+4. Resolve review threads, obtain independent approval and merge staging. After
+   its deployment has passed these checks, review and merge `staging` into `main`.
+   Verify the production health endpoints and keep the preceding production SHA
+   as the rollback target. No database migration was run by this code update.
+
+Validation for this update: 33 unit/regression checks pass; the production build
+passes on Next.js 15.5.28; seven live requests reject invalid tenant/version
+inputs with HTTP 400; health and runtime model metadata respond successfully.
+The local database audit still finds all 88 required concepts, READY text/vector
+indexes and 512 synthetic notes with no missing codings or stale ancestry. A
+browser run of the mixed cardiology note places aspirin (a substance code) under
+Medications and keeps only disorder codes in principal/comorbidity groups.
+These local checks do not substitute for checks using deployed environment secrets.

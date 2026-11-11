@@ -79,7 +79,7 @@ The central claim, and the thing to demo: **one document per concept, one platfo
 
 ## 5. Proposing the principal diagnosis and comorbidities — a recommended practice
 
-A note rarely mentions one condition. A discharge summary can name a dozen: the reason for admission, chronic conditions, symptoms, things ruled out, a parent's illness. A coder must name **one principal diagnosis**, the condition chiefly responsible for the encounter, plus the **comorbidities** that also need coding. That choice drives billing groupers (DRGs), quality measures, registries and cohort queries, so getting it wrong costs money, distorts reporting and puts patients in the wrong cohort.
+A note rarely mentions one condition. A discharge summary can name a dozen: the reason for admission, chronic conditions, symptoms, things ruled out, a parent's illness. Only codes for SNOMED clinical findings and disorders qualify as diagnoses; medication, procedure and other code types are kept in their own groups. A coder must name **one principal diagnosis**, the condition chiefly responsible for the encounter, plus the **comorbidities** that also need coding. That choice drives billing groupers (DRGs), quality measures, registries and cohort queries, so getting it wrong costs money, distorts reporting and puts patients in the wrong cohort.
 
 The demo proposes both and the reviewer confirms. Every step below is a good practice any SNOMED-based coding pipeline can adopt:
 

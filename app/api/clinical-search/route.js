@@ -1,3 +1,4 @@
+import { fixedDemoTenantId } from '@/lib/demo-request-validation';
 import { POST as searchTerms } from '@/app/api/navigator-search/route';
 import { getCollection } from '@/lib/mongo';
 import { getMongoConfig, getSemanticsConfig, getLlmConfig } from '@/lib/config';
@@ -16,11 +17,11 @@ const termCache = new Map();
 const TERM_CACHE_TTL_MS = 300000;
 export async function GET(request) {
   try {
-    const tenantId = new URL(request.url).searchParams.get('tenantId') || 'demo-hospital';
+    const tenantId = fixedDemoTenantId(new URL(request.url).searchParams.get('tenantId'));
     const notes = await getCollection('grounded_notes');
     const corpus = await clinicalCorpusStats(notes,tenantId,getSemanticsConfig().releaseId);
     return ok({ ok: true, corpus, dateContext: resolveClinicalDateContext(corpus) });
-  } catch (_error) { return fail('Could not count searchable clinical notes.',500); }
+  } catch (error) { return fail(error.message || 'Could not count searchable clinical notes.',400); }
 }
 async function planQuery(query, body) {
   const cfg = getLlmConfig();
@@ -39,7 +40,7 @@ async function planQuery(query, body) {
 export async function POST(request) {
   try {
     const body = await parseJson(request);
-    const tenantId = typeof body.tenantId === 'string' && body.tenantId ? body.tenantId : 'demo-hospital';
+    const tenantId = fixedDemoTenantId(body.tenantId);
     const notes = await getCollection('grounded_notes');
     const corpus = await clinicalCorpusStats(notes,tenantId,getSemanticsConfig().releaseId);
     const dateContext = resolveClinicalDateContext(corpus,body.dateMode ?? 'demo');

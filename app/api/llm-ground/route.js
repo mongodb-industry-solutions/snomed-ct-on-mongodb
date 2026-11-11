@@ -1,3 +1,4 @@
+import { eligiblePrimaryConceptIds } from "@/lib/clinical-code-type";
 import { getLlmConfig } from "@/lib/config";
 import { callLlmGateway } from "@/lib/llm";
 import { elapsedMs, fail, ok, parseJson, normalizeUsage } from "@/lib/http";
@@ -31,7 +32,7 @@ function buildPrompt(mentions, languageCode, rankingHint) {
     `You are a clinical coding assistant reviewing SNOMED CT candidates that a search engine already retrieved from a clinical note (language: ${languageCode || "en"}).`,
     `Do three things:`,
     `1. CONFIRM each mention: choose the single best conceptId FROM ITS candidate list (the meaning that matches the phrase in context). If no candidate fits, use "none". NEVER invent a conceptId that is not in the candidate list.`,
-    `2. PICK THE PRIMARY DIAGNOSIS: among mentions that are present and about the patient (not negated, not family history, not past history, not merely suspected), choose the one conceptId that is the principal diagnosis — the condition chiefly responsible for this encounter. Prefer a disorder stated in the assessment/active section over a symptom it explains, and the most specific concept over its parent. If none qualifies, use "none".`,
+    `2. PICK THE PRIMARY DIAGNOSIS: among mentions that are present and about the patient (not negated, not family history, not past history, not merely suspected), choose the one conceptId that is the principal diagnosis — the condition chiefly responsible for this encounter. Only clinical findings and disorders qualify; medications, substances, procedures, events, structures and observables NEVER qualify. Prefer a disorder stated in the assessment/active section over a symptom it explains, and the most specific concept over its parent. If none qualifies, use "none".`,
     ...hint,
     `3. SUMMARIZE in 2-3 plain-language sentences what you confirmed, what you excluded and why (negation/family/uncertainty), and why you chose the primary diagnosis. Write it for a clinician, referring to concepts by their term.`,
     `Respond with ONLY this JSON object, no prose, no code fences:`,
@@ -102,9 +103,9 @@ export async function POST(request) {
       const set = allowed.get(d.mentionId);
       return set && (d.conceptId === "none" || set.has(String(d.conceptId)));
     });
-    // Primary must be a real candidate id somewhere in the set (or "none").
-    const allIds = new Set([].concat(...mentions.map((m) => (m.candidates || []).map((c) => String(c.conceptId)))));
-    const primaryConceptId = result.primaryConceptId !== "none" && allIds.has(result.primaryConceptId) ? result.primaryConceptId : "none";
+    // Candidate membership alone does not make a medication or procedure a diagnosis.
+    const primaryIds = eligiblePrimaryConceptIds(mentions, decisions);
+    const primaryConceptId = primaryIds.has(result.primaryConceptId) ? result.primaryConceptId : "none";
 
     return ok({
       ok: true,

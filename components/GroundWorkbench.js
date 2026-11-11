@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { canonicalSemanticTag, clinicalCodeRole, isPrincipalMention } from "@/lib/clinical-code-type";
 import dynamic from "next/dynamic";
 import Badge from "@leafygreen-ui/badge";
 const Code = dynamic(() => import("@leafygreen-ui/code"), { ssr: false });
@@ -115,7 +116,7 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
         section: r.llmSection || r.section || "other",
         status: r.status,
         candidates: [r.topCandidate, ...(r.alternatives || [])].filter(Boolean).map((c) => ({
-          conceptId: c.conceptId, term: c.term, semanticTag: c.semanticTag
+          conceptId: c.conceptId, term: c.term, semanticTag: c.semanticTag, ancestorIds: c.ancestorIds, active: c.active
         }))
       }));
     const empty = { loading: false, error: "", byMention: {}, model: "", summary: "", primaryConceptId: "none" };
@@ -595,17 +596,18 @@ function PipelineRail({ extractor, extractorModel }) {
 
 // ---- Grouped grounding: the same mentions arranged by clinical category ----
 function GroupedGrounding({ results }) {
-  const groups = { diagnoses: [], procedures: [], medications: [], history: [], family: [], negated: [] };
+  const groups = { diagnoses: [], procedures: [], medications: [], other: [], history: [], family: [], negated: [] };
   const seen = new Set();
   for (const r of Array.isArray(results) ? results : []) {
     const tc = r.topCandidate;
     if (!tc) continue;
-    const tag = String(tc.semanticTag || "").toLowerCase();
+    const role = clinicalCodeRole(tc);
     let b;
     if (r.assertion === "absent") b = "negated";
     else if ((r.experiencer || "patient") === "family" || r.assertion === "family-history") b = "family";
-    else if (PROCEDURE_TAGS.includes(tag)) b = "procedures";
-    else if (PRODUCT_TAGS.includes(tag)) b = "medications";
+    else if (role === "procedure") b = "procedures";
+    else if (role === "medication") b = "medications";
+    else if (role === "other") b = "other";
     else if (r.assertion === "historical" || r.llmSection === "history") b = "history";
     else b = "diagnoses";
     const key = `${b}:${tc.conceptId}`;
@@ -617,6 +619,7 @@ function GroupedGrounding({ results }) {
     { key: "diagnoses", label: "Diagnoses", color: GREEN },
     { key: "procedures", label: "Procedures", color: "#016BF8" },
     { key: "medications", label: "Medications", color: "#00857B" },
+    { key: "other", label: "Other concept types", color: "#5C6C75" },
     { key: "history", label: "History", color: CUE_COLORS.history },
     { key: "family", label: "Family history", color: CUE_COLORS["family-history"] },
     { key: "negated", label: "Negated / ruled out", color: CUE_COLORS.negation }
@@ -647,7 +650,7 @@ function GroupedGrounding({ results }) {
 // ---- Coder worklist: codings grouped by clinical ROLE, with one principal ----
 function WorklistRow({ m, chosen, chooseConcept, isPrincipal, leading, trailing }) {
   const [open, setOpen] = useState(false);
-  const c = m.candidates.find((x) => String(x.conceptId) === String(chosen)) || m.candidates[0];
+  const c = m.candidates.find((x) => String(x.conceptId) === String(chosen)) || m.candidates?.[0];
   const hasAlts = m.candidates.length > 1;
   if (!c) return null;
   return (
@@ -708,9 +711,10 @@ function ReviewWorklist({ mentions, rank = () => 0, pickDisagreement = null, rol
   const diagnoses = byRole("diagnosis");
   const procedures = byRole("procedure");
   const medications = byRole("medication");
+  const otherConcepts = byRole("other");
   const family = byRole("family-history");
   const context = mentions.filter((m) => ["ruled-out", "planned"].includes(roleOf(m)));
-  const principal = diagnoses.find((m) => m.key === principalKey) || null;
+  const principal = diagnoses.find((m) => m.key === principalKey && m.assertion === "present") || null;
 
   // Secondary diagnoses: one row per concept, and a concept already covered by
   // a more specific coded concept on the same SNOMED branch is folded into it.
@@ -736,7 +740,7 @@ function ReviewWorklist({ mentions, rank = () => 0, pickDisagreement = null, rol
       return true;
     });
   // A finding is usually a symptom the principal explains — shown, not coded by default.
-  const isFinding = (m) => ["finding", "hallazgo"].includes(String(conceptOf(m).semanticTag || "").toLowerCase());
+  const isFinding = (m) => canonicalSemanticTag(conceptOf(m).semanticTag) === "finding";
   const activeSecondary = secondary.filter((m) => m.assertion === "present" && !isFinding(m));
   const symptomSecondary = secondary.filter((m) => m.assertion === "present" && isFinding(m));
   const pastSecondary = secondary.filter((m) => m.assertion === "historical");
@@ -834,6 +838,13 @@ function ReviewWorklist({ mentions, rank = () => 0, pickDisagreement = null, rol
         <>
           {sectionHead("Medications", medications.length, "#00857B")}
           {box(medications.map((m) => row(m, checkbox(m.key, !!accepted[m.key]))))}
+        </>
+      ) : null}
+
+      {otherConcepts.length > 0 ? (
+        <>
+          {sectionHead("Other concept types", otherConcepts.length, "#5C6C75", "not eligible as diagnoses")}
+          {box(otherConcepts.map((m) => row(m, <Badge variant="lightgray">Not a clinical finding</Badge>)))}
         </>
       ) : null}
 
@@ -1035,7 +1046,7 @@ function ConceptsView({ results, principal, proposal = {}, llm = {}, onSave, sav
   const [chosen, setChosen] = useState(() => {
     const init = {}; groundedMentions.forEach((m) => { init[m.key] = m.defaultChoice; }); return init;
   });
-  const chosenCandidate = (m) => m.candidates.find((c) => String(c.conceptId) === String(chosen[m.key])) || m.candidates[0];
+  const chosenCandidate = (m) => (m.candidates || []).find((c) => String(c.conceptId) === String(chosen[m.key])) || m.candidates?.[0];
 
   // Add a concept found via terminology search as a new (manual) review row.
   const addConcept = (concept, query) => {
@@ -1066,10 +1077,7 @@ function ConceptsView({ results, principal, proposal = {}, llm = {}, onSave, sav
     if (m.assertion === "absent") return "ruled-out";
     if (m.experiencer === "family" || m.assertion === "family-history") return "family-history";
     if (m.assertion === "planned") return "planned";
-    const tag = String(chosenCandidate(m)?.semanticTag || "").toLowerCase();
-    if (PROCEDURE_TAGS.includes(tag)) return "procedure";
-    if (PRODUCT_TAGS.includes(tag)) return "medication";
-    return "diagnosis";
+    return clinicalCodeRole(chosenCandidate(m));
   };
   const EXCLUDE_REASON = { "ruled-out": "negated / ruled out", planned: "planned / not yet done", "family-history": "family history" };
   const CODEABLE_ROLES = ["diagnosis", "procedure", "medication"];
@@ -1087,13 +1095,14 @@ function ConceptsView({ results, principal, proposal = {}, llm = {}, onSave, sav
     });
   const rank = (m) => rankOf.get(String(chosen[m.key])) ?? Number.MAX_SAFE_INTEGER;
   // Only a present diagnosis can be principal — not past history or a suspicion.
-  const principalEligible = diagnosisMentions.filter((m) => m.assertion === "present").sort((a, b) => rank(a) - rank(b));
+  const principalEligible = diagnosisMentions.filter((m) => isPrincipalMention(m, chosenCandidate(m))).sort((a, b) => rank(a) - rank(b));
   const ruleSuggestion = principal ? String(principal.conceptId) : null;
-  const llmSuggestion = llm.primaryConceptId && llm.primaryConceptId !== "none" ? String(llm.primaryConceptId) : null;
+  const llmSuggestion = principalEligible.some((m) => String(chosen[m.key]) === String(llm.primaryConceptId)) ? String(llm.primaryConceptId) : null;
   const suggestedPrimary = llmSuggestion || ruleSuggestion;
   const defaultPrincipalKey = principalEligible.find((m) => String(chosen[m.key]) === suggestedPrimary)?.key
     || (principalEligible[0]?.key || null);
-  const [principalKey, setPrincipalKey] = useState(defaultPrincipalKey);
+  const [selectedPrincipalKey, setPrincipalKey] = useState(defaultPrincipalKey);
+  const principalKey = principalEligible.some((m) => m.key === selectedPrincipalKey) ? selectedPrincipalKey : null;
   // When the two pickers disagree, the coder should see both rather than one
   // silently overriding the other.
   const pickDisagreement = llmSuggestion && ruleSuggestion && llmSuggestion !== ruleSuggestion
@@ -1104,7 +1113,7 @@ function ConceptsView({ results, principal, proposal = {}, llm = {}, onSave, sav
     const init = {};
     // Past history, suspected diagnoses and presenting symptoms start unticked:
     // the coder opts them in.
-    const isFinding = (m) => ["finding", "hallazgo"].includes(String(chosenCandidate(m)?.semanticTag || "").toLowerCase());
+    const isFinding = (m) => canonicalSemanticTag(chosenCandidate(m)?.semanticTag) === "finding";
     mentions.forEach((m) => {
       const role = roleOf(m);
       init[m.key] = CODEABLE_ROLES.includes(role) && m.status === "accepted"
@@ -1114,7 +1123,10 @@ function ConceptsView({ results, principal, proposal = {}, llm = {}, onSave, sav
     return init;
   });
   const toggle = (key) => setAccepted((cur) => ({ ...cur, [key]: !cur[key] }));
-  const setPrincipal = (key) => { setPrincipalKey(key); setAccepted((cur) => ({ ...cur, [key]: true })); };
+  const setPrincipal = (key) => {
+    if (!principalEligible.some((m) => m.key === key)) return;
+    setPrincipalKey(key); setAccepted((cur) => ({ ...cur, [key]: true }));
+  };
   const chooseConcept = (key, conceptId) => setChosen((cur) => ({ ...cur, [key]: String(conceptId) }));
   const [outputLens, setOutputLens] = useState("codings");
   const [sectionFilter, setSectionFilter] = useState("all");
@@ -1127,7 +1139,8 @@ function ConceptsView({ results, principal, proposal = {}, llm = {}, onSave, sav
     return {
       conceptId: String(c?.conceptId || ""),
       term: c?.term || m.phrase,
-      tag: String(c?.semanticTag || "").toLowerCase(),
+      tag: canonicalSemanticTag(c?.semanticTag),
+      codeRole: clinicalCodeRole(c),
       ancestorIds: Array.isArray(c?.ancestorIds) ? c.ancestorIds.map(String) : [],
       assertion: m.assertion,
       subject: m.experiencer,
@@ -1139,7 +1152,7 @@ function ConceptsView({ results, principal, proposal = {}, llm = {}, onSave, sav
   // Codings: dedupe by chosen concept so the same code isn't saved twice.
   const acceptedCodings = (() => {
     const seen = new Set(); const out = [];
-    mentions.filter((m) => accepted[m.key]).forEach((m) => {
+    mentions.filter((m) => accepted[m.key] && CODEABLE_ROLES.includes(roleOf(m))).forEach((m) => {
       const c = chosenCandidate(m); if (!c) return;
       const id = String(c.conceptId); if (seen.has(id)) return; seen.add(id);
       const baseRole = roleOf(m);
@@ -1358,9 +1371,6 @@ const OUTPUT_LENSES = [
   { key: "corpus", label: "Corpus query" },
   { key: "fhir", label: "FHIR bundle" }
 ];
-const DISORDER_TAGS = ["disorder", "finding", "trastorno", "hallazgo"];
-const PROCEDURE_TAGS = ["procedure", "procedimiento", "regime/therapy", "régimen/tratamiento"];
-const PRODUCT_TAGS = ["product", "producto", "medicinal product", "clinical drug", "medicinal product form", "fármaco de uso clínico", "producto medicinal", "forma farmacéutica de producto medicinal", "presentación farmacéutica"];
 // Scope roots chosen to exist in the demo scope (cardio / oncology / diabetes).
 const SCOPE_ROOTS = [
   { label: "Diabetes mellitus", root: "73211009" },
@@ -1449,13 +1459,13 @@ function OutputLensView({ lens, codings: codingsIn }) {
   const present = codings.filter((c) => c.assertion !== "absent" && c.subject === "patient");
 
   if (lens === "problems") {
-    return <LensList intro="Active patient problems — present findings and disorders, ready for a coded problem list (Condition.code)." empty="No present patient disorders grounded." items={present.filter((c) => DISORDER_TAGS.includes(c.tag))} />;
+    return <LensList intro="Active patient problems — present findings and disorders, ready for a coded problem list (Condition.code)." empty="No present patient disorders grounded." items={present.filter((c) => c.codeRole === "diagnosis")} />;
   }
   if (lens === "procedures") {
-    return <LensList intro="Procedures mentioned for the patient (Procedure.code)." empty="No procedures grounded." items={present.filter((c) => PROCEDURE_TAGS.includes(c.tag))} />;
+    return <LensList intro="Procedures mentioned for the patient (Procedure.code)." empty="No procedures grounded." items={present.filter((c) => c.codeRole === "procedure")} />;
   }
   if (lens === "medications") {
-    return <LensList intro="Medicinal products mentioned (MedicationStatement.medication)." empty="No medications grounded." items={present.filter((c) => PRODUCT_TAGS.includes(c.tag))} />;
+    return <LensList intro="Medicinal products mentioned (MedicationStatement.medication)." empty="No medications grounded." items={present.filter((c) => c.codeRole === "medication")} />;
   }
   if (lens === "family") {
     return <LensList intro="Family-history mentions — recorded about relatives, not the patient (FamilyMemberHistory)." empty="No family-history mentions." items={codings.filter((c) => c.subject === "family")} />;
@@ -1547,12 +1557,13 @@ function fhirResourceFor(c) {
   if (c.subject === "family") {
     return { resourceType: "FamilyMemberHistory", status: "completed", patient: subject, condition: [{ code }] };
   }
-  if (PROCEDURE_TAGS.includes(c.tag)) {
+  if (c.codeRole === "procedure") {
     return { resourceType: "Procedure", status: "completed", code, subject };
   }
-  if (PRODUCT_TAGS.includes(c.tag)) {
+  if (c.codeRole === "medication") {
     return { resourceType: "MedicationStatement", status: "active", medicationCodeableConcept: code, subject };
   }
+  if (c.codeRole !== "diagnosis") return null;
   const verification = c.assertion === "absent" ? "refuted" : c.assertion === "suspected" ? "provisional" : "confirmed";
   return {
     resourceType: "Condition",
@@ -1567,7 +1578,7 @@ function FhirLens({ codings }) {
   const bundle = {
     resourceType: "Bundle",
     type: "collection",
-    entry: codings.map((c) => ({ resource: fhirResourceFor(c) }))
+    entry: codings.map(fhirResourceFor).filter(Boolean).map((resource) => ({ resource }))
   };
   const json = JSON.stringify(bundle, null, 2);
   return (
