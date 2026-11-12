@@ -16,7 +16,7 @@ The key must be permitted to list the OpenAI-compatible and Anthropic catalogs a
 
 The release retains these secret mappings and supports both the legacy unified capability catalog and the new split catalogs. Compatible code can therefore deploy with existing secrets first; operators can switch the three values afterward. Do not mix an Azure endpoint with the new Grove key, or the new endpoint with an old Azure key. Rotate all three values in one operation, then restart/roll out the application pods so they read the updated environment. Existing pods retain their environment until restart.
 
-Validate staging's code and gateway transition first. After the staging-to-main promotion and successful production deployment, perform the same transition in production. Keep the preceding image/configuration available for rollback, subject to the old key's expiry.
+Deploy and validate the compatible code in staging, then promote it to main and confirm production deployment with the existing secrets. After the code is deployed in production, request the gateway-secret transition: change staging first, validate its new catalog and GPT/Claude routing, then repeat in production. Keep the preceding image/configuration available for rollback, subject to the old key's expiry.
 
 Keep each environment's existing **`MONGODB_URI`, `MONGODB_DB` and `VOYAGE_API_KEY`** in `snomed-secrets`. Voyage still powers the reranker/manual embedding client; the Grove generation key does not replace it. No database migration is required by this code release.
 
