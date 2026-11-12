@@ -7,18 +7,17 @@ ownership:
   driEmail: francesc.mateu@mongodb.com
 
 env:
-  NODE_ENV: prod
+  NODE_ENV: production
   # AWS region for IRSA (no credentials needed)
   AWS_REGION: us-east-1
   # Backend API URL for frontend to connect to backend health check - get <service-name> using kubectl get services
   COLLECTION_NAME: test-collection
   ENABLE_LLM_GROUNDING: true
-  LLM_GROUNDING_MODEL: gpt-5.4-mini
-  LLM_API_STYLE: responses
+  LLM_GROUNDING_MODEL: gpt-5.4-nano
+  LLM_API_STYLE: auto
   HYBRID_FUSION_MODE: appRrf
   SNOMED_RELEASE_ID: "20260601"
-  LLM_GROUNDING_MODELS: gpt-5.4-mini,gpt-5.4,gpt-5.5,claude-opus-4-8,claude-sonnet-5,claude-haiku-4-5
-  LLM_LOG_IO: true
+  LLM_LOG_IO: false
 
 ## Single Pod Containers
 envSecrets:

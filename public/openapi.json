@@ -1114,8 +1114,12 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "default": "demo-hospital"
-            }
+              "default": "demo-hospital",
+              "enum": [
+                "demo-hospital"
+              ]
+            },
+            "description": "The fixed tenant supported by this standalone demo."
           }
         ],
         "responses": {

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "gold-en-diabetes",
+    "text": "HPI: Patient with type 2 diabetes mellitus.\nAssessment: Diabetic nephropathy. No evidence of diabetic retinopathy on current review.\nFamily history: Mother with type 2 diabetes.\nPlan: Continue metformin and repeat urine albumin.",
+    "languageCode": "en"
+  },
+  {
+    "id": "gold-es-diabetes",
+    "text": "Motivo: Paciente con diabetes mellitus tipo 2.\nEvaluación: Nefropatía diabética. Sin evidencia de retinopatía diabética en el control actual.\nAntecedentes familiares: Madre con diabetes tipo 2.\nPlan: Continuar metformina y repetir albúmina en orina.",
+    "languageCode": "es"
+  },
+  {
+    "id": "gold-en-oncology",
+    "text": "Assessment: Carcinoma of breast.\nNo evidence of metastatic carcinoma.\nPlan: Refer to tumor board.",
+    "languageCode": "en"
+  },
+  {
+    "id": "gold-en-cardiology",
+    "text": "Assessment: Acute myocardial infarction complicated by heart failure.\nHistory of atrial fibrillation.\nDenies chest pain at present.",
+    "languageCode": "en"
+  },
+  {
+    "id": "gold-en-cardio-renal",
+    "text": "Chief complaint: Shortness of breath.\nHistory: Known heart failure and chronic kidney disease. Hypertension on treatment.\nThe patient denies chest pain and has no fever.\nAssessment: Acute decompensated heart failure. Suspected pneumonia pending chest X-ray.\nPlan: IV furosemide, admit for monitoring.",
+    "languageCode": "en"
+  },
+  {
+    "id": "gold-en-ischemic",
+    "text": "History: Stable angina and type 2 diabetes mellitus. Father had myocardial infarction.\nAssessment: Coronary artery disease.\nProcedure: Coronary angiography performed today.\nPlan: Start aspirin and atorvastatin. No evidence of active bleeding.",
+    "languageCode": "en"
+  },
+  {
+    "id": "gold-en-respiratory",
+    "text": "Chief complaint: Productive cough and wheezing for three days.\nHistory: Chronic obstructive pulmonary disease. Ex-smoker.\nAssessment: Acute exacerbation of COPD. No signs of pneumonia on examination.\nPlan: Nebulized salbutamol and a course of prednisolone.",
+    "languageCode": "en"
+  }
+]

@@ -1,0 +1,64 @@
+{
+  "scope": "Local release validation, not deployed-state confirmation",
+  "tests": {
+    "passed": 94,
+    "failed": 0
+  },
+  "productionBuild": "passed",
+  "clinicalQueries": {
+    "verifiedExamples": 44,
+    "falsePositives": 0,
+    "falseNegatives": 0
+  },
+  "databaseAudit": {
+    "checkedAt": "2026-11-12T19:18:58.682Z",
+    "database": "terminology",
+    "sourceCollection": "snomed-irbd",
+    "termCollection": "snomed-term-search",
+    "releaseId": "20260601",
+    "requiredConcepts": 87,
+    "missingSource": [],
+    "missingProjection": [],
+    "projectionCount": 132788,
+    "legacyDefinitionRows": 1441,
+    "searchIndexes": [
+      {
+        "name": "snomed_text_idx",
+        "status": "READY",
+        "queryable": true,
+        "definitionSha256": "8d2ac7876c22e1450dd40c175be0be8aa4a00c87f38dbff2680e4f27d488dcb9"
+      },
+      {
+        "name": "snomed_voyage_idx",
+        "status": "READY",
+        "queryable": true,
+        "definitionSha256": "f6521e9c0e9cab9a0de3fa20ded80438c5bf9c1f9d62100cf90f5c3f1868e6cc"
+      }
+    ],
+    "corpus": {
+      "totalNotes": 518,
+      "syntheticNotes": 512,
+      "english": 261,
+      "spanish": 257,
+      "demoReferenceDate": "2026-10-29T12:00:00.000Z",
+      "demoReleaseId": "20260601"
+    },
+    "expectedSyntheticNotes": 512,
+    "missingNotes": 0,
+    "missingCodings": 0,
+    "staleAncestry": 0
+  },
+  "grove": {
+    "nativeTextModelsSmokeTested": 40,
+    "legacyUnifiedCatalogCompatibility": "unit-tested"
+  },
+  "projectionRebuildPerformed": false,
+  "clinicalAccuracyClaim": false,
+  "nanoLimitations": {
+    "examples": 16,
+    "degradedRuns": 7,
+    "rejectedSemanticDecisions": 20,
+    "malformedDecisionJsonResponses": 1
+  },
+  "deployment": "Awaiting independent approval of latest staging PR push"
+}

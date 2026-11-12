@@ -195,19 +195,23 @@ Automated embedding indexes require MongoDB-side model/provider configuration. L
 
 ## LLM Models
 
-Stage-1 extraction and the optional LLM assist call an OpenAI-compatible gateway (e.g. Grove / Azure Foundry). One endpoint, one key, many models; MongoDB stays the code authority and the LLM only extracts what to look up. Without a gateway the app uses deterministic extraction.
+Extraction, semantic verification and optional assist share a gateway adapter. One Grove key serves the available provider protocols; MongoDB remains the code authority. Without a gateway the app uses deterministic extraction.
 
 ```bash
 ENABLE_LLM_GROUNDING=true
-LLM_BASE_URL=https://<gateway>/openai/v1
+LLM_BASE_URL=https://ai-gateway.corp.mongodb.com
 LLM_API_KEY=<gateway key>
-LLM_AUTH_HEADER=api-key            # "authorization-bearer" for stock OpenAI
-LLM_API_STYLE=responses            # universal on Grove/Azure (serves every provider); "chat" = OpenAI-only /chat/completions
-LLM_GROUNDING_MODEL=gpt-5.4-mini   # default for a fresh session
-LLM_GROUNDING_MODELS=gpt-5.4-mini,gpt-5.4,gpt-5.5  # gateway model IDs for both pickers
+LLM_AUTH_HEADER=authorization-bearer
+LLM_API_STYLE=auto                 # discover and route OpenAI and Anthropic protocols
+LLM_GROUNDING_MODEL=gpt-5.4-nano   # default for a fresh session
+LLM_GROUNDING_MODELS=gpt-5.4-nano,gpt-5.4-mini,gpt-5.4,gpt-5.5  # display priority and fallback roster
 ```
 
-`LLM_API_STYLE=responses` is the surface that reaches every provider on Grove/Azure Foundry (OpenAI, Anthropic, Mistral, DeepSeek, xAI, Kimi, …); `/chat/completions` is OpenAI-only there. Both model pickers read the server roster at runtime, so container builds need no browser model-list variable. `GET /api/llm-config` returns only the enabled flag, default model and available model IDs. A previously selected session model remains selected if it is still available. Model ids are provider-specific — copy each exactly from the gateway's Model Catalog. Use the **Benchmark** tab to compare models on quality (recall + exclusion), tokens, and latency, then set the winner as the session model.
+The new Grove gateway exposes separate OpenAI-compatible and Anthropic catalogs. `LLM_API_STYLE=auto` combines them: OpenAI-owned models use `/openai/v1/responses`, other OpenAI-compatible text providers use `/openai/v1/chat/completions`, and Anthropic catalog models use `/anthropic/v1/messages`. Routing comes from catalog provenance and provider metadata, preserving exact model IDs. OpenAI-compatible requests use Bearer authorization; Anthropic requests use `x-api-key` and `anthropic-version`. One Grove key serves both. See [the gateway migration](docs/GROVE_GATEWAY_MIGRATION.md) for protocol checks and the local default.
+
+Both model pickers discover IDs at runtime, including models absent from `LLM_GROUNDING_MODELS`. Non-text models are excluded using available capability/type metadata, with embedding/reranking ID markers as a fallback for standard catalogs that omit modality. Configuration supplies display priority and a fallback roster. Auto routing requires a discovered route and fails visibly when none can be verified. A temporary refresh failure retains the last verified catalog for up to 30 minutes with a visible warning. Explicit `responses`, `chat` and `anthropic` styles support single-protocol gateways, including the previous Azure APIM configuration.
+
+`GET /api/llm-config` returns only the enabled flag, default model, available model IDs and catalog status. Credentials remain on the server; container builds need no browser model-list variable. A saved session choice remains selected while available. An unavailable model selection is rejected rather than executing a different model. The session choice is used for extraction, semantic verification, optional LLM assist and language-model clinical query planning. The Benchmark model filter can find any advertised ID; an API benchmark without explicit choices runs only the default model. Catalog availability does not establish clinical quality: use the **Benchmark** tab to compare models on quality (recall + exclusion), tokens and latency before selecting one for operational use. See [the model and projection review](docs/MODELS_AND_PROJECTION_COVERAGE.md) for measured runtime evidence and deployment limits.
 
 ## Production Boundaries
 

@@ -1188,13 +1188,17 @@ export default function DemoWorkbench() {
   // Persisted to localStorage; synced after mount to avoid a hydration mismatch.
   const [sessionModels, setSessionModels] = useState([DEFAULT_LLM_MODEL]);
   const [sessionModel, setSessionModelState] = useState(DEFAULT_LLM_MODEL);
+  const [modelsLoading, setModelsLoading] = useState(true);
+  const [modelConfigWarning, setModelConfigWarning] = useState("");
   useEffect(() => {
     let cancelled = false;
     fetch("/api/llm-config", { cache: "no-store" })
       .then((response) => { if (!response.ok) throw new Error("Model configuration unavailable"); return response.json(); })
       .then((config) => {
-        if (cancelled || !config.availableModels?.length) return;
+        if (cancelled) return;
+        if (!config.availableModels?.length) throw new Error("No models available");
         setSessionModels(config.availableModels);
+        setModelConfigWarning(config.modelCatalog?.reason || "");
         let model = config.defaultModel;
         try {
           const saved = window.localStorage.getItem("sessionModel");
@@ -1202,7 +1206,8 @@ export default function DemoWorkbench() {
         } catch (_e) { /* localStorage unavailable */ }
         setSessionModelState(model);
       })
-      .catch(() => {});
+      .catch(() => { if (!cancelled) setModelConfigWarning("Model list unavailable. Refresh to retry."); })
+      .finally(() => { if (!cancelled) setModelsLoading(false); });
     return () => { cancelled = true; };
   }, []);
   const setSessionModel = (m) => {
@@ -1934,13 +1939,16 @@ export default function DemoWorkbench() {
           <p className="appBreadcrumbSub">{activeMeta?.summary || ""}</p>
         </div>
         <div className="appHeaderRight">
-          {sessionModels.length > 1 ? (
+          {sessionModels.length > 0 ? (
             <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#5C6C75" }}>
               <span style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", fontSize: 10.5 }}>Session model</span>
-              <select value={sessionModel} onChange={(e) => setSessionModel(e.target.value)} title="Extraction model used when you Ground a Note"
+              <select value={sessionModel} disabled={modelsLoading} onChange={(e) => setSessionModel(e.target.value)} title="Text-generation model for this session"
                 style={{ fontSize: 12, padding: "4px 8px", borderRadius: 7, border: "1px solid #C1C7CB", background: "#fff", color: "#001E2B", fontWeight: 600, cursor: "pointer", maxWidth: 200 }}>
+                {!sessionModels.includes(sessionModel) ? <option value={sessionModel} disabled>{sessionModel} · unavailable</option> : null}
                 {sessionModels.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
+              {modelsLoading ? <span role="status">Loading models…</span> : null}
+              {modelConfigWarning ? <span role="status" style={{ color: "#8A6D1F", maxWidth: 220 }}>{modelConfigWarning}</span> : null}
             </label>
           ) : null}
           {hybridTuning.tuning && !isDefaultTuning(hybridTuning.tuning, hybridTuning.defaults) ? (

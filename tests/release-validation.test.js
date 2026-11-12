@@ -23,6 +23,11 @@ test('ambiguous or malformed Boolean nodes cannot silently lose a branch', () =>
   assert.throws(() => validateClinicalPlan({ all: 'diabetes', phrase: 'heart failure' }));
   assert.throws(() => validateClinicalPlan({ all: [{ any: [{ phrase: 'diabetes' }], all: [{ phrase: 'heart failure' }] }] }));
 });
+test('Boolean groups cannot discard leaf condition fields', () => {
+  for(const key of ['all','any'])for(const leaf of [{phrase:'heart failure'},{assertion:'absent'},{subject:'family'},{exclude:true}])
+    assert.throws(()=>validateClinicalPlan({[key]:[{phrase:'diabetes'}],...leaf}));
+  assert.deepEqual(validateClinicalPlan({all:[{phrase:'diabetes'}],filters:{minAge:65}}).filters,{minAge:65});
+});
 
 test('synthetic corpus identities stay stable in the default tenant and cannot collide across tenants', () => {
   const options = { now: new Date('2026-10-29T12:00:00Z'), releaseId: '20260601' };

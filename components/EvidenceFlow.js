@@ -34,7 +34,7 @@ function toNumber(value, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-export default function EvidenceFlow({ graph, reviewRows, selectedSpanId, onSelectSpan }) {
+export default function EvidenceFlow({ graph, reviewRows, selectedSpanId, onSelectSpan, showGrounding = true }) {
   const rowByMentionId = useMemo(
     () => new Map((Array.isArray(reviewRows) ? reviewRows : []).map((row) => [row.mentionId, row])),
     [reviewRows]
@@ -60,7 +60,8 @@ export default function EvidenceFlow({ graph, reviewRows, selectedSpanId, onSele
       const row = rowByMentionId.get(mention.mentionId) || null;
       const assertion = mention.derivedAssertion || "present";
       const color = ASSERTION_COLORS[assertion] || "#00684A";
-      const grounded = row?.selectedCandidate?.term || mention?.groundedConcept?.term || null;
+      const concept = row?.selectedCandidate || mention?.groundedConcept;
+      const grounded = showGrounding ? concept?.term || null : null;
       const isSelected = row && row.id === selectedSpanId;
 
       nodes.push({
@@ -72,8 +73,9 @@ export default function EvidenceFlow({ graph, reviewRows, selectedSpanId, onSele
             <div style={{ textAlign: "left", maxWidth: 190 }}>
               <div style={{ fontWeight: 700, fontSize: 12 }}>{mention.text || "mention"}</div>
               {grounded ? (
-                <div style={{ fontSize: 11, opacity: 0.85, marginTop: 2 }}>{grounded}</div>
+                <div style={{ fontSize: 11, opacity: 0.85, marginTop: 2 }}>{grounded}<br />SNOMED CT · #{concept.conceptId}<br />{mention.review?.status === 'accepted' ? 'Description match' : 'Proposed · needs review'}</div>
               ) : null}
+              {showGrounding && !grounded ? <div style={{ fontSize: 10 }}>Unresolved</div> : null}
               <div style={{ fontSize: 10, marginTop: 4, color }}>{assertion}</div>
             </div>
           )
@@ -149,7 +151,7 @@ export default function EvidenceFlow({ graph, reviewRows, selectedSpanId, onSele
     });
 
     return { nodes, edges };
-  }, [graph, rowByMentionId, selectedSpanId]);
+  }, [graph, rowByMentionId, selectedSpanId, showGrounding]);
 
   if (!graph || nodes.length === 0) return null;
 

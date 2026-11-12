@@ -98,6 +98,13 @@ test('validate bounded code sets and reject unsafe or unresolved scopes', () => 
   for (const value of [[],Array(1),['73211009',{$gt:0}],Array(41).fill('73211009'),['invalid']]) assert.throws(()=>clinicalConceptIds(value));
   assert.deepEqual(buildBroadClinicalScope('unrecognized phrase',[{conceptId:'12345678',term:'Unrelated',rerankScore:0.1}]).conceptIds,[]);
 });
+test('missing rerank scores cannot turn unrelated retrieval results into a clinical scope', () => {
+  const unrelated=[{conceptId:'12345678',term:'Unrelated finding',descriptionTerms:['Unrelated finding'],semanticTag:'finding',ancestorIds:[]},
+    {conceptId:'87654321',term:'Unrelated subtype',descriptionTerms:['Unrelated subtype'],semanticTag:'finding',ancestorIds:['12345678']}];
+  assert.deepEqual(buildBroadClinicalScope('unrecognized request',unrelated).conceptIds,[]);
+  const supported={conceptId:'56789012',term:'Persistent renal impairment',descriptionTerms:['Persistent renal impairment'],semanticTag:'finding',ancestorIds:[]};
+  assert.deepEqual(buildBroadClinicalScope('renal impairment',[...unrelated,supported]).conceptIds,[supported.conceptId]);
+});
 test('parentheses preserve alternatives inside conjunctions, and malformed grouping is rejected', () => {
   const plan=parseClinicalQuery('Find notes with (diabetes or heart failure) and kidney disease but without pneumonia');
   assert.equal(plan.all[0].any.length,2);

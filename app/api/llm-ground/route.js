@@ -1,5 +1,5 @@
 import { eligiblePrimaryConceptIds } from "@/lib/clinical-code-type";
-import { getLlmConfig } from "@/lib/config";
+import { getRuntimeLlmConfig, withLlmModel } from "@/lib/runtime-llm-config";
 import { callLlmGateway } from "@/lib/llm";
 import { elapsedMs, fail, ok, parseJson, normalizeUsage } from "@/lib/http";
 
@@ -60,7 +60,7 @@ function parseResult(text) {
 
 export async function POST(request) {
   const startedAt = process.hrtime.bigint();
-  const cfg = getLlmConfig();
+  let cfg = await getRuntimeLlmConfig();
 
   if (!cfg.enabled) {
     return fail("LLM grounding is disabled. Set ENABLE_LLM_GROUNDING=true to enable it.", 503, { code: "llm-disabled" });
@@ -71,6 +71,8 @@ export async function POST(request) {
 
   try {
     const body = await parseJson(request);
+    try { cfg = withLlmModel(cfg, body.model); }
+    catch (error) { return fail(error.message, error.status, { code: error.code }); }
     const mentions = Array.isArray(body.mentions) ? body.mentions.slice(0, 25) : [];
     const languageCode = typeof body.languageCode === "string" ? body.languageCode : "en";
     const rankingHint = (Array.isArray(body.rankingHint) ? body.rankingHint : [])

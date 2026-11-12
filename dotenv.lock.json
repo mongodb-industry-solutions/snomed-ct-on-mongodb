@@ -279,7 +279,7 @@
       "required": false,
       "secret": false,
       "default": "",
-      "description": "OpenAI-compatible Responses API base URL."
+      "description": "Gateway root URL for automatic protocol routing, or an API base URL for an explicit protocol."
     },
     "LLM_API_KEY": {
       "category": "llm",
@@ -293,28 +293,28 @@
       "required": false,
       "secret": false,
       "default": "api-key",
-      "description": "Auth header strategy: api-key or authorization-bearer."
+      "description": "OpenAI-compatible auth: authorization-bearer for Grove or api-key for legacy APIM. Anthropic requests use x-api-key and anthropic-version."
     },
     "LLM_API_STYLE": {
       "category": "llm",
       "required": false,
       "secret": false,
       "default": "responses",
-      "description": "Gateway API style: chat or responses."
+      "description": "Gateway API style: auto for separate OpenAI/Anthropic catalogs, or explicit responses, chat, anthropic."
     },
     "LLM_GROUNDING_MODEL": {
       "category": "llm",
       "required": false,
       "secret": false,
-      "default": "gpt-5.4-mini",
+      "default": "gpt-5.4-nano",
       "description": "Default extraction/review model."
     },
     "LLM_GROUNDING_MODELS": {
       "category": "llm",
       "required": false,
       "secret": false,
-      "default": "gpt-5.4-mini,gpt-5.4,gpt-5.5",
-      "description": "Runtime server roster shared by the session model picker and benchmark. Use exact model IDs served by the gateway."
+      "default": "gpt-5.4-nano,gpt-5.4-mini,gpt-5.4,gpt-5.5",
+      "description": "Display priority and fallback roster. Successful discovery controls available models; auto routing requires a verified catalog route."
     },
     "LLM_GROUNDING_MAX_TOKENS": {
       "category": "llm",
@@ -322,6 +322,13 @@
       "secret": false,
       "default": "4096",
       "description": "Maximum LLM response tokens for structured grounding output."
+    },
+    "LLM_LOG_IO": {
+      "category": "llm",
+      "required": false,
+      "secret": false,
+      "default": "false",
+      "description": "Debug logging of extraction prompts and model responses in the server console. Enable only for deliberate prompt debugging."
     },
     "TERM_PROJECTION_SCOPE": {
       "category": "termProjection",

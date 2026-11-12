@@ -29,19 +29,25 @@ The default database and collections are:
 
 ## Optional Capabilities
 
+`STAGING_MONGODB_URI`, `STAGING_VOYAGE_API_KEY`, `PROT_MONGODB_URI` and `PROT_VOYAGE_API_KEY` are not read by the app or this repository's deployment pipeline. If retained as deployment reference values, manage them separately from local runtime configuration. Kanopy injects `MONGODB_URI`, `MONGODB_DB`, `VOYAGE_API_KEY`, `LLM_BASE_URL`, `LLM_AUTH_HEADER` and `LLM_API_KEY` from each environment's `snomed-secrets` group.
+
 LLM-assisted note grounding:
 
 ```bash
 ENABLE_LLM_GROUNDING=true
-LLM_BASE_URL=<openai-compatible-responses-api-base>
+LLM_BASE_URL=https://ai-gateway.corp.mongodb.com
 LLM_API_KEY=<key>
-LLM_AUTH_HEADER=api-key
-LLM_API_STYLE=responses
-LLM_GROUNDING_MODEL=gpt-5.4-mini
-LLM_GROUNDING_MODELS=gpt-5.4-mini,gpt-5.4,gpt-5.5
+LLM_AUTH_HEADER=authorization-bearer
+LLM_API_STYLE=auto
+LLM_GROUNDING_MODEL=gpt-5.4-nano
+LLM_GROUNDING_MODELS=gpt-5.4-nano,gpt-5.4-mini,gpt-5.4,gpt-5.5
 ```
 
-The model roster is read at runtime by the browser from `/api/llm-config` and benchmark metadata. `NEXT_PUBLIC_LLM_GROUNDING_MODELS` is retired; it no longer controls either picker. Configure additional provider IDs only when served by your gateway. A model name in this list routes to an existing gateway deployment; the demo does not provision model deployments.
+Auto routing reads `/openai/v1/models` and `/anthropic/v1/models` and chooses each request protocol from catalog/provider metadata. The OpenAI-compatible endpoints use Bearer authorization. Anthropic uses the same key in `x-api-key`, with `anthropic-version: 2023-06-01`. Model selection, response text and token usage share one adapter across extraction, semantic review, assist and query planning. A bare gateway URL is sufficient; endpoint-specific URLs are normalized to avoid duplicating API paths.
+
+The browser reads the discovered catalog from `/api/llm-config` and benchmark metadata. `LLM_GROUNDING_MODELS` controls display priority and fallback, while a successful catalog controls availability. Auto mode will not guess a route if discovery fails. `NEXT_PUBLIC_LLM_GROUNDING_MODELS` is retired. Explicit `responses`, `chat` and `anthropic` API styles remain available for a single-protocol gateway; legacy APIM can continue using `LLM_AUTH_HEADER=api-key`. See [Grove migration](GROVE_GATEWAY_MIGRATION.md) for deployment-secret updates.
+
+`LLM_LOG_IO` is a supported debugging option, disabled when omitted. Set `LLM_LOG_IO=false` for normal operation. Enabling it logs extraction prompts, including clinical note text, and model responses to the server console.
 
 Voyage rerank/manual embedding fallback:
 

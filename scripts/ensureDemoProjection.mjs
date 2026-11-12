@@ -3,6 +3,7 @@ import { MongoClient } from 'mongodb';
 import { DEMO_REQUIRED_CONCEPT_IDS } from '../lib/demo-concept-requirements.js';
 import { getMongoConfig, getSearchConfig } from '../lib/config.js';
 import { measureProjectionModel, writeModelState, PROJECTION_STATE_ID } from '../lib/model-state.js';
+import { TERM_DESCRIPTION_TYPES } from '../lib/grounding-policy.js';
 const releaseId = process.env.SNOMED_RELEASE_ID || '20260601';
 const client = new MongoClient(process.env.MONGODB_URI);
 await client.connect();
@@ -12,7 +13,8 @@ try {
   const known = await source.find({ releaseId, conceptId: { $in: DEMO_REQUIRED_CONCEPT_IDS }, active: { $in: [true, 1, '1'] } }, { projection: { conceptId: 1 } }).toArray();
   const missingSource = DEMO_REQUIRED_CONCEPT_IDS.filter(id => !known.some(d => String(d.conceptId) === id));
   if (missingSource.length) throw new Error(`Required concepts missing from the active release: ${missingSource.join(', ')}`);
-  const covered = new Set(await terms.distinct('conceptId', { releaseId, conceptId: { $in: DEMO_REQUIRED_CONCEPT_IDS } }));
+  const covered = new Set(await terms.distinct('conceptId', { releaseId, conceptId: { $in: DEMO_REQUIRED_CONCEPT_IDS },
+    active: true, conceptActive: true, typeId: { $in: TERM_DESCRIPTION_TYPES } }));
   console.log(JSON.stringify({ releaseId, requiredConcepts: DEMO_REQUIRED_CONCEPT_IDS.length, missingProjection: DEMO_REQUIRED_CONCEPT_IDS.filter(id => !covered.has(id)), apply: process.env.TERMS_ENSURE_APPLY === 'true' }));
 } finally { await client.close(); }
 if (process.env.TERMS_ENSURE_APPLY === 'true') {
