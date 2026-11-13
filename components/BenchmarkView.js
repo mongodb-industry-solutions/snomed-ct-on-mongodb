@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import PromptPanel from "@/components/PromptPanel";
+import { isDefaultTuning, tuningOverrides } from "@/components/HybridTuning";
 
 // Extraction-model benchmark. Headline score = the LLM EVIDENCE GRAPH: for each
 // gold note, how well the model extracts the expected facts (mention + assertion
@@ -17,8 +18,6 @@ const VIOLET = "#8F4FBF";
 const RED = "#DB3030";
 const AMBER = "#8A6D1F";
 const BORDER = "#e3e7ea";
-const MODELS = (process.env.NEXT_PUBLIC_LLM_GROUNDING_MODELS || "gpt-5.5")
-  .split(",").map((s) => s.trim()).filter(Boolean);
 
 const pct = (x) => (x == null ? "—" : `${Math.round(x * 100)}%`);
 const accBg = (x) => `rgba(0,104,74,${(0.05 + (x || 0) * 0.25).toFixed(3)})`;
@@ -38,6 +37,8 @@ function aggregate(model, cells) {
     detection: avg((c) => c.detection), assertionAcc: avg((c) => c.assertionAcc),
     subjectAcc: avg((c) => c.subjectAcc), precision: avg((c) => c.precision),
     retrievalRecall: avg((c) => c.retrievalRecall),
+    acceptedMappingRecall:avg(c=>c.acceptedMappingRecall),
+    semanticFailures:present.reduce((n,c)=>n+(c.semanticFailures||0),0),
     tokensPerNote,
     avgLatencyMs: present.length ? Math.round(present.reduce((a, c) => a + (c.ms || 0), 0) / present.length) : 0,
     qualityPer1kTokens: tokensPerNote > 0 ? evidenceComposite / (tokensPerNote / 1000) : null
@@ -65,11 +66,14 @@ function MiniBar({ label, value, color = GREEN }) {
   );
 }
 
-export default function BenchmarkView({ sessionModel, onPickModel }) {
-  const [selectedModels, setSelectedModels] = useState(MODELS.slice(0, Math.min(4, MODELS.length)));
+export default function BenchmarkView({ sessionModel, onPickModel, hybridTuning = null }) {
+  const [availableModels, setAvailableModels] = useState([]);
+  const [modelFilter, setModelFilter] = useState("");
+  const [modelCatalogWarning, setModelCatalogWarning] = useState("");
+  const [selectedModels, setSelectedModels] = useState([]);
   const [gold, setGold] = useState([]);
   const [selectedNotes, setSelectedNotes] = useState([]);
-  const [searchMode, setSearchMode] = useState("lexical");
+  const [searchMode, setSearchMode] = useState("hybrid");
   const [grid, setGrid] = useState({});
   const [progress, setProgress] = useState({ running: false, done: 0, total: 0, current: "" });
   const [error, setError] = useState("");
@@ -82,13 +86,20 @@ export default function BenchmarkView({ sessionModel, onPickModel }) {
   useEffect(() => {
     let cancelled = false;
     fetch("/api/benchmark", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ metaOnly: true }) })
-      .then((r) => r.json())
-      .then((d) => { if (cancelled || !d?.goldNotes) return; setGold(d.goldNotes); setSelectedNotes(d.goldNotes.map((g) => g.id)); })
-      .catch(() => {});
+      .then((r) => { if (!r.ok) throw new Error("Benchmark models unavailable"); return r.json(); })
+      .then((d) => {
+        if (cancelled) return;
+        if (!Array.isArray(d?.goldNotes) || !Array.isArray(d?.availableModels) || !d.availableModels.length) throw new Error("Invalid benchmark catalog");
+        setGold(d.goldNotes); setSelectedNotes(d.goldNotes.map((g) => g.id));
+        setAvailableModels(d.availableModels); setSelectedModels(d.availableModels.slice(0, 4));
+        setModelCatalogWarning(d.modelCatalog?.reason || "");
+      })
+      .catch(() => { if (!cancelled) setError("Could not load the benchmark models and notes. Refresh to retry."); });
     return () => { cancelled = true; };
   }, []);
 
   const toggle = (arr, set, v) => set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+  const visibleModels = availableModels.filter((model) => model.toLowerCase().includes(modelFilter.trim().toLowerCase()));
 
   const run = async () => {
     setError(""); setRecommended(null); setGrid({}); setDrawer(null);
@@ -97,12 +108,15 @@ export default function BenchmarkView({ sessionModel, onPickModel }) {
     for (const model of selectedModels) for (const note of notes) tasks.push({ model, noteId: note.id, title: note.title });
     if (!tasks.length) { setError("Select at least one model and one note."); return; }
     const acc = {};
+    // Hybrid runs use the session's fusion tuning (set in Navigation), so the
+    // benchmark measures the same settings the user searches with.
+    const overrides = searchMode === "hybrid" ? tuningOverrides(hybridTuning?.tuning, hybridTuning?.defaults) : null;
     setProgress({ running: true, done: 0, total: tasks.length, current: "" });
     for (let i = 0; i < tasks.length; i++) {
       const t = tasks[i];
       setProgress({ running: true, done: i, total: tasks.length, current: `${t.title} · ${t.model}` });
       try {
-        const res = await fetch("/api/benchmark", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ models: [t.model], noteIds: [t.noteId], searchMode }) });
+        const res = await fetch("/api/benchmark", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ models: [t.model], noteIds: [t.noteId], searchMode, ...(overrides ? { tuning: overrides } : {}) }) });
         const d = await res.json();
         if (!res.ok || d?.ok === false) throw new Error(d?.error || `HTTP ${res.status}`);
         acc[key(t.model, t.noteId)] = d.models?.[0]?.notes?.[0] || { noteId: t.noteId, scored: false, error: "no result" };
@@ -161,8 +175,8 @@ export default function BenchmarkView({ sessionModel, onPickModel }) {
         {introOpen ? (
           <>
             {" "}Retrieval is MongoDB&apos;s job, run on every request under the chosen search mode against the scoped
-            sample dataset. Concepts that aren&apos;t in the demo sidecar are flagged as <strong>controlled scope gaps</strong>
-            {" "}and excluded from the retrieval score — a known data limitation, not a model or retrieval failure. Precision
+            sample dataset. Concepts that aren&apos;t in the search collection are flagged as <strong>coverage gaps</strong>
+            {" "}and remain in the retrieval score. Exact codes are scored; hierarchy proximity alone does not establish equivalent meaning. Precision
             is shown for information only, since the gold set isn&apos;t exhaustive. Pick models and notes, run, then
             {" "}<strong>click a cell</strong> to inspect the note, the model&apos;s output, and the score.
           </>
@@ -176,12 +190,15 @@ export default function BenchmarkView({ sessionModel, onPickModel }) {
 
       <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16, background: "#fff", marginBottom: 18 }}>
         {/* Models */}
-        <PickerHeader label="Models" count={`${selectedModels.length}/${MODELS.length}`} onAll={() => setSelectedModels(MODELS)} onClear={() => setSelectedModels([])} disabled={progress.running} />
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-          {MODELS.map((m) => {
+        <PickerHeader label="Models" count={`${selectedModels.length}/${availableModels.length}`} onAll={() => setSelectedModels([...new Set([...selectedModels, ...visibleModels])])} onClear={() => setSelectedModels([])} disabled={progress.running} />
+        <input aria-label="Filter benchmark models" placeholder="Find a model" value={modelFilter} onChange={(event) => setModelFilter(event.target.value)} style={{ width: "100%", maxWidth: 300, padding: "6px 9px", marginBottom: 10, border: `1px solid ${BORDER}`, borderRadius: 7 }} />
+        {modelCatalogWarning ? <p role="status" style={{ color: "#8A6D1F", fontSize: 12 }}>{modelCatalogWarning}</p> : null}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14, maxHeight: 190, overflowY: "auto" }}>
+          {visibleModels.map((m) => {
             const on = selectedModels.includes(m);
             return <Chip key={m} on={on} disabled={progress.running} onClick={() => toggle(selectedModels, setSelectedModels, m)}>{on ? "✓ " : ""}{m}</Chip>;
           })}
+          {!visibleModels.length ? <span style={{ fontSize: 12, color: "#5C6C75" }}>No models match this filter.</span> : null}
         </div>
         {/* Notes */}
         <PickerHeader label="Gold notes" count={`${selectedNotes.length}/${gold.length}`} onAll={() => setSelectedNotes(gold.map((g) => g.id))} onClear={() => setSelectedNotes([])} disabled={progress.running} />
@@ -206,6 +223,13 @@ export default function BenchmarkView({ sessionModel, onPickModel }) {
             </select>
           </label>
           <span style={{ fontSize: 12, color: "#889397" }}>Evidence-graph score is retrieval-independent; the mode only affects the retrieval axis.</span>
+          {searchMode === "hybrid" && hybridTuning?.tuning ? (
+            <span style={{ fontSize: 11.5, color: isDefaultTuning(hybridTuning.tuning, hybridTuning.defaults) ? "#5C6C75" : "#8A6D1F" }}
+              title="Session fusion tuning — change it in Navigation → Hybrid → Fusion tuning">
+              Fusion: {hybridTuning.tuning.fusionMode} · lexical {hybridTuning.tuning.lexicalWeight} / semantic {hybridTuning.tuning.semanticWeight} · rerank {hybridTuning.tuning.rerank ? "on" : "off"}
+              {isDefaultTuning(hybridTuning.tuning, hybridTuning.defaults) ? " (defaults)" : " (session custom)"}
+            </span>
+          ) : null}
         </div>
         {error ? <p style={{ color: RED, fontSize: 13, marginTop: 10 }}>{error}</p> : null}
 
@@ -267,12 +291,14 @@ export default function BenchmarkView({ sessionModel, onPickModel }) {
                         <MiniBar label="precision" value={m.precision} color="#5C6C75" />
                         <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "#B4C0C7", marginTop: 4 }}>MongoDB retrieval · {searchMode}</div>
                         <MiniBar label="concepts" value={m.retrievalRecall} color={AMBER} />
+                        <MiniBar label="accepted exact codes" value={m.acceptedMappingRecall} color={GREEN} />
                       </div>
                       <div style={{ display: "flex", gap: 12, fontSize: 11.5, color: "#5C6C75", flexWrap: "wrap" }}>
                         <span><strong style={{ color: INK }}>{m.tokensPerNote.toLocaleString()}</strong> tok/note</span>
                         <span><strong style={{ color: INK }}>{m.avgLatencyMs}</strong> ms/note</span>
                         {m.qualityPer1kTokens != null ? <span title="evidence-graph quality per 1k tokens"><strong style={{ color: INK }}>{m.qualityPer1kTokens.toFixed(2)}</strong> q/1k</span> : null}
                         {m.fallbacks > 0 ? <span style={{ color: AMBER }}>{m.fallbacks} fallback{m.fallbacks === 1 ? "" : "s"}</span> : null}
+                        {m.semanticFailures > 0 ? <span style={{color:RED}}>{m.semanticFailures} incomplete source checks</span> : null}
                       </div>
                       {onPickModel ? (
                         <button type="button" onClick={() => onPickModel(m.model)}
@@ -395,10 +421,10 @@ function InspectorDrawer({ note, model, cell, searchMode, onClose }) {
           <>
             <Section title={`Model output — evidence graph (${mentions.length} mentions)`}>
               <div style={{ fontSize: 11, color: "#889397", margin: "0 0 6px" }}>
-                <span style={{ color: GREEN, fontWeight: 800 }}>●</span> coded (present · patient) &nbsp;·&nbsp; <span style={{ fontWeight: 800 }}>○</span> context (negated / family — not coded)
+                <span style={{ color: GREEN, fontWeight: 800 }}>●</span> accepted mapping · patient &nbsp;·&nbsp; <span style={{ fontWeight: 800 }}>○</span> proposal or context
               </div>
               {mentions.length ? mentions.map((g, i) => (
-                <Row key={i} mark={g.present ? "●" : "○"} markColor={g.present ? GREEN : "#889397"}
+                <Row key={i} mark={g.accepted&&g.subject==='patient' ? "●" : "○"} markColor={g.accepted&&g.subject==='patient' ? GREEN : "#889397"}
                   main={<>“{g.verbatim || g.phrase}” {g.term ? <span style={{ color: "#889397" }}>→ {g.term}</span> : null}</>}
                   sub={`${g.assertion} · ${g.subject} · ${g.section}${g.phrase && g.verbatim && g.phrase !== g.verbatim ? ` · normalized: ${g.phrase}` : ""}`} />
               )) : <p style={sub}>No mentions extracted.</p>}
@@ -424,10 +450,11 @@ function InspectorDrawer({ note, model, cell, searchMode, onClose }) {
               <ScoreLine label="Precision" formula="mentions matching a fact (info only — gold isn't exhaustive)" value={cell.precision} color="#5C6C75" />
               <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: 6, paddingTop: 6 }}>
                 <ScoreLine label="Evidence graph" formula="graph recall — facts detected with correct assertion + subject" value={cell.evidenceComposite} color={INK} bold />
-                <ScoreLine label={`Retrieval (${searchMode})`} formula={cell.inScopeCount ? `${(cell.retrievalHits || []).filter((h) => h.hit && h.inScope).length} / ${cell.inScopeCount} in-scope${cell.outOfScopeCount ? ` · ${cell.outOfScopeCount} out-of-scope (controlled)` : ""}` : (cell.outOfScopeCount ? `all ${cell.outOfScopeCount} concepts out of demo scope (controlled)` : "no expected concepts")} value={cell.retrievalRecall} color={AMBER} />
+                <ScoreLine label={`Exact retrieval (${searchMode})`} formula={`${(cell.retrievalHits||[]).filter(h=>h.exact).length} / ${cell.expectedConceptCount||0} expected concepts; ${cell.outOfScopeCount||0} coverage gaps`} value={cell.retrievalRecall} color={AMBER} />
+                <ScoreLine label="Accepted exact mappings" formula="Expected codes accepted after source verification" value={cell.acceptedMappingRecall} color={GREEN} />
                 {(cell.retrievalHits || []).some((h) => !h.inScope) ? (
                   <div style={{ fontSize: 11, color: "#889397", marginTop: 4 }}>
-                    Out of demo scope (concept not in the sidecar — controlled): {(cell.retrievalHits || []).filter((h) => !h.inScope).map((h) => `${h.term} #${h.conceptId}`).join("; ")}
+                    Missing search projections: {(cell.retrievalHits || []).filter((h) => !h.inScope).map((h) => `${h.term} #${h.conceptId}`).join("; ")}
                   </div>
                 ) : null}
               </div>

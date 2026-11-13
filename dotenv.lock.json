@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-07-07",
+  "updated": "2026-10-30",
   "exampleFile": ".env.example",
   "policy": {
     "envLocal": "Local only. Keep credentials, cluster endpoints, and machine-specific overrides out of git.",
@@ -194,7 +194,7 @@
       "category": "hybridSearch",
       "required": false,
       "secret": false,
-      "default": "rankFusion",
+      "default": "appRrf",
       "description": "Hybrid search fusion strategy."
     },
     "HYBRID_NATIVE_FUSION_MAX_TIME_MS": {
@@ -202,7 +202,7 @@
       "required": false,
       "secret": false,
       "default": "8000",
-      "description": "Timeout guard for native MongoDB fusion plans."
+      "description": "Bound an optional native fusion experiment before application-side fallback."
     },
     "HYBRID_CANDIDATE_POOL": {
       "category": "hybridSearch",
@@ -279,7 +279,7 @@
       "required": false,
       "secret": false,
       "default": "",
-      "description": "OpenAI-compatible Responses API base URL."
+      "description": "Gateway root URL for automatic protocol routing, or an API base URL for an explicit protocol."
     },
     "LLM_API_KEY": {
       "category": "llm",
@@ -293,28 +293,28 @@
       "required": false,
       "secret": false,
       "default": "api-key",
-      "description": "Auth header strategy: api-key or authorization-bearer."
+      "description": "OpenAI-compatible auth: authorization-bearer for Grove or api-key for legacy APIM. Anthropic requests use x-api-key and anthropic-version."
     },
     "LLM_API_STYLE": {
       "category": "llm",
       "required": false,
       "secret": false,
-      "default": "chat",
-      "description": "Gateway API style: chat or responses."
+      "default": "responses",
+      "description": "Gateway API style: auto for separate OpenAI/Anthropic catalogs, or explicit responses, chat, anthropic."
     },
     "LLM_GROUNDING_MODEL": {
       "category": "llm",
       "required": false,
       "secret": false,
-      "default": "gpt-5.5",
+      "default": "gpt-5.4-nano",
       "description": "Default extraction/review model."
     },
     "LLM_GROUNDING_MODELS": {
       "category": "llm",
       "required": false,
       "secret": false,
-      "default": "gpt-5.5",
-      "description": "Server-side comma-separated benchmark/model-picker list."
+      "default": "gpt-5.4-nano,gpt-5.4-mini,gpt-5.4,gpt-5.5",
+      "description": "Display priority and fallback roster. Successful discovery controls available models; auto routing requires a verified catalog route."
     },
     "LLM_GROUNDING_MAX_TOKENS": {
       "category": "llm",
@@ -323,12 +323,12 @@
       "default": "4096",
       "description": "Maximum LLM response tokens for structured grounding output."
     },
-    "NEXT_PUBLIC_LLM_GROUNDING_MODELS": {
+    "LLM_LOG_IO": {
       "category": "llm",
       "required": false,
       "secret": false,
-      "default": "gpt-5.5",
-      "description": "Browser-visible comma-separated model list."
+      "default": "false",
+      "description": "Debug logging of extraction prompts and model responses in the server console. Enable only for deliberate prompt debugging."
     },
     "TERM_PROJECTION_SCOPE": {
       "category": "termProjection",
@@ -616,6 +616,27 @@
       "secret": false,
       "default": "15000",
       "description": "Search timeout for gold-note and benchmark scripts."
+    },
+    "HYBRID_LEXICAL_WEIGHT": {
+      "category": "hybridSearch",
+      "required": false,
+      "secret": false,
+      "default": "0.55",
+      "description": "Lexical contribution to reciprocal rank fusion."
+    },
+    "HYBRID_SEMANTIC_WEIGHT": {
+      "category": "hybridSearch",
+      "required": false,
+      "secret": false,
+      "default": "0.45",
+      "description": "Semantic contribution to reciprocal rank fusion."
+    },
+    "HYBRID_RERANK_ENABLED": {
+      "category": "hybridSearch",
+      "required": false,
+      "secret": false,
+      "default": "true",
+      "description": "Enable Voyage reranking after hybrid fusion when a key is configured."
     }
   }
 }

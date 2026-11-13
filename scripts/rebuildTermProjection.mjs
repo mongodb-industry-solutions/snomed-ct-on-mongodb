@@ -1,4 +1,5 @@
 import "./loadEnv.mjs";
+import { DEMO_REQUIRED_CONCEPT_IDS } from "../lib/demo-concept-requirements.js";
 
 const SMOKE_CONCEPT_IDS = [
   // Search & Navigate examples.
@@ -82,7 +83,7 @@ if (scope === "smoke") {
   clearEnv("PROJECTION_AREA_CONCEPT_ID");
   clearEnv("PROJECTION_AREA_CONCEPT_IDS");
 } else if (scope === "demo") {
-  clearEnv("PROJECTION_CONCEPT_IDS");
+  process.env.PROJECTION_CONCEPT_IDS = DEMO_REQUIRED_CONCEPT_IDS.join(",");
   clearEnv("PROJECTION_AREA_CONCEPT_ID");
   process.env.PROJECTION_AREA_CONCEPT_IDS = process.env.PROJECTION_AREA_CONCEPT_IDS || DEMO_BRANCH_CONCEPT_IDS.join(",");
   process.env.PROJECTION_AREA_RELATION = process.env.PROJECTION_AREA_RELATION || "descendants";

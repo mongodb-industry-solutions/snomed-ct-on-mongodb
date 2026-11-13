@@ -17,6 +17,7 @@ const EXCLUDED_SEMANTIC_TAGS = new Set([
   "special concept", "concepto especial",
   "metadata", "metadato",
   "foundational metadata",
+  "qualifier value", "calificador",
   "snomed rt+ctv3"
 ]);
 
@@ -78,7 +79,8 @@ const DEFAULT_EMBED_ELIGIBLE_ANCESTOR_IDS = [
   "71388002",
   "363787002",
   "123037004",
-  "373873005"
+  "373873005",
+  "105590001"
 ];
 const DEFAULT_SNOMED_RELEASE_ID = "20260601";
 
@@ -178,12 +180,14 @@ function projectionDocId({ releaseId, conceptId, description, languageCode, inde
 function buildLanguageProjections({ concept, languageCode, releaseId, maxSynonyms, topRootIds, embedEligibleAncestorIds }) {
   const descriptions = Array.isArray(concept?.descriptions) ? concept.descriptions : [];
   const filtered = descriptions
-    .filter((desc) => normalizeActive(desc?.active) && String(desc?.languageCode || "").toLowerCase() === languageCode)
+    .filter((desc) => normalizeActive(desc?.active) && String(desc?.languageCode || "").toLowerCase() === languageCode && [TYPE_FSN, TYPE_SYNONYM].includes(String(desc?.typeId)))
     .map(compactDescription)
     .filter(Boolean);
 
   if (filtered.length === 0) return [];
 
+  const definitionText = descriptions.filter((d) => normalizeActive(d?.active) && d.languageCode === languageCode && String(d.typeId) === "900000000000550004")
+    .map((d) => d.term).filter(Boolean).join(" ").slice(0, 2400);
   const fsnCandidates = filtered.filter((desc) => desc.typeId === TYPE_FSN).sort(sortDescriptions);
   const synonymCandidates = filtered.filter((desc) => desc.typeId === TYPE_SYNONYM).sort(sortDescriptions);
   const allSorted = filtered.slice().sort(sortDescriptions);
@@ -254,7 +258,7 @@ function buildLanguageProjections({ concept, languageCode, releaseId, maxSynonym
     const normalizedTerm = description.normalized || normalizeText(term);
     const termType = termTypeOf(description.typeId);
     const descriptionEmbedText = inferredAncestorIds.some((id) => eligibleSet.has(id))
-      ? [term, displayTerm, fsn, semanticTag].filter(Boolean).join(" | ")
+      ? [term, displayTerm, fsn, semanticTag, definitionText].filter(Boolean).join(" | ")
       : embedText;
 
     const doc = {
@@ -268,7 +272,7 @@ function buildLanguageProjections({ concept, languageCode, releaseId, maxSynonym
       conceptActive,
       term,
       matchedTerm: term,
-      displayTerm: term,
+      displayTerm,
       preferredTerm: displayTerm,
       fsn,
       normalizedTerm,
@@ -297,6 +301,7 @@ function buildLanguageProjections({ concept, languageCode, releaseId, maxSynonym
     if (synonyms.length > 0) doc.synonyms = synonyms;
     if (topRoots.length > 0) doc.topRoots = topRoots;
     if (areaTags.length > 0) doc.areaTags = areaTags;
+    if (definitionText) doc.definitionText = definitionText;
     if (descriptionEmbedText) doc.embedText = descriptionEmbedText;
 
     return doc;
@@ -809,7 +814,8 @@ async function run() {
   }
 }
 
-run().catch((error) => {
+export const projectionBuildRun = run();
+projectionBuildRun.catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });

@@ -133,7 +133,7 @@ Navigation supports:
 
 - MongoDB Search over SNOMED terms, synonyms, FSNs, and normalized autocomplete fields.
 - Semantic filters by language, semantic tag, hierarchy scope, and ECL subset.
-- Hybrid retrieval with native MongoDB fusion where available, with application-side fallback.
+- Hybrid retrieval defaults to App-side RRF (two parallel queries), with reranking enabled. Native MongoDB fusion remains available through **Tune** or `HYBRID_FUSION_MODE=rankFusion` / `scoreFusion`.
 - Concept detail inspection, hierarchy graph, parents/children, relationships, and release metadata.
 - Explainable generated MQL for advanced/demo mode.
 - ECL and area scopes are cached in the app process after first expansion; first-run attribute-refined scopes can be slower because the candidate set is being built.
@@ -170,6 +170,10 @@ Core endpoints:
 - `POST /api/llm-ground`
 - `POST /api/coding-confirm`
 - `POST /api/grounded-corpus`
+- `POST /api/clinical-search`
+- `POST /api/graph-neighborhood`
+- `POST /api/translate`
+- `GET` / `POST /api/fhir/ConceptMap/$translate`
 
 Operations:
 
@@ -181,7 +185,7 @@ Operations:
 - `GET /api/ping`
 - `POST /api/explorer-feedback`
 
-Legacy FHIR cohort, mapping-set, refset-authoring, and binding APIs are intentionally not part of the current demo.
+Legacy FHIR cohort, refset-authoring, and binding APIs are intentionally not part of the current demo. A bounded FHIR R4 `$translate` subset reads imported mappings on concept documents.
 
 ## Configuration
 
@@ -191,20 +195,23 @@ Automated embedding indexes require MongoDB-side model/provider configuration. L
 
 ## LLM Models
 
-Stage-1 extraction and the optional LLM assist call an OpenAI-compatible gateway (e.g. Grove / Azure Foundry). One endpoint, one key, many models; MongoDB stays the code authority and the LLM only extracts what to look up. Without a gateway the app uses deterministic extraction.
+Extraction, semantic verification and optional assist share a gateway adapter. One Grove key serves the available provider protocols; MongoDB remains the code authority. Without a gateway the app uses deterministic extraction.
 
 ```bash
 ENABLE_LLM_GROUNDING=true
-LLM_BASE_URL=https://<gateway>/openai/v1
+LLM_BASE_URL=https://ai-gateway.corp.mongodb.com
 LLM_API_KEY=<gateway key>
-LLM_AUTH_HEADER=api-key            # "authorization-bearer" for stock OpenAI
-LLM_API_STYLE=responses            # universal on Grove/Azure (serves every provider); "chat" = OpenAI-only /chat/completions
-LLM_GROUNDING_MODEL=gpt-5.5        # session default
-LLM_GROUNDING_MODELS=gpt-5.5,claude-opus-4-8,DeepSeek-V3.2,...        # roster for the picker + benchmark
-NEXT_PUBLIC_LLM_GROUNDING_MODELS=gpt-5.5,claude-opus-4-8,DeepSeek-V3.2,...  # same list, mirrored to the browser (restart dev)
+LLM_AUTH_HEADER=authorization-bearer
+LLM_API_STYLE=auto                 # discover and route OpenAI and Anthropic protocols
+LLM_GROUNDING_MODEL=gpt-5.4-nano   # default for a fresh session
+LLM_GROUNDING_MODELS=gpt-5.4-nano,gpt-5.4-mini,gpt-5.4,gpt-5.5  # display priority and fallback roster
 ```
 
-`LLM_API_STYLE=responses` is the surface that reaches every provider on Grove/Azure Foundry (OpenAI, Anthropic, Mistral, DeepSeek, xAI, Kimi, …); `/chat/completions` is OpenAI-only there. Model ids are provider-specific — copy each exactly from the gateway's Model Catalog. Use the **Benchmark** tab to compare models on quality (recall + exclusion), tokens, and latency, then set the winner as the session model.
+The new Grove gateway exposes separate OpenAI-compatible and Anthropic catalogs. `LLM_API_STYLE=auto` combines them: OpenAI-owned models use `/openai/v1/responses`, other OpenAI-compatible text providers use `/openai/v1/chat/completions`, and Anthropic catalog models use `/anthropic/v1/messages`. Routing comes from catalog provenance and provider metadata, preserving exact model IDs. OpenAI-compatible requests use Bearer authorization; Anthropic requests use `x-api-key` and `anthropic-version`. One Grove key serves both. See [the gateway migration](docs/GROVE_GATEWAY_MIGRATION.md) for protocol checks and the local default.
+
+Both model pickers discover IDs at runtime, including models absent from `LLM_GROUNDING_MODELS`. Non-text models are excluded using available capability/type metadata, with embedding/reranking ID markers as a fallback for standard catalogs that omit modality. Configuration supplies display priority and a fallback roster. Auto routing requires a discovered route and fails visibly when none can be verified. A temporary refresh failure retains the last verified catalog for up to 30 minutes with a visible warning. Explicit `responses`, `chat` and `anthropic` styles support single-protocol gateways, including the previous Azure APIM configuration.
+
+`GET /api/llm-config` returns only the enabled flag, default model, available model IDs and catalog status. Credentials remain on the server; container builds need no browser model-list variable. A saved session choice remains selected while available. An unavailable model selection is rejected rather than executing a different model. The session choice is used for extraction, semantic verification, optional LLM assist and language-model clinical query planning. The Benchmark model filter can find any advertised ID; an API benchmark without explicit choices runs only the default model. Catalog availability does not establish clinical quality: use the **Benchmark** tab to compare models on quality (recall + exclusion), tokens and latency before selecting one for operational use. See [the model and projection review](docs/MODELS_AND_PROJECTION_COVERAGE.md) for measured runtime evidence and deployment limits.
 
 ## Production Boundaries
 
@@ -229,3 +236,50 @@ The repository intentionally ignores:
 - local deployment/debug artifacts
 
 If you add sample data, keep it synthetic, minimal, and license-safe.
+
+## Search Coded Notes
+
+The **Search Coded Notes** screen searches broadly in one click. Each phrase becomes one or more matching SNOMED families, including their descendants, while preserving the request's AND/OR grouping. A general request such as "hypertension" uses Hypertensive disorder rather than narrowing to Essential hypertension. Active descriptions anchor the meaning; semantic phrasing can retain several close families. Redundant subtypes are covered through their parent family. All descendants match stored ancestor IDs, including codes outside the curated search projection. **Fine-tune the search** optionally narrows a condition to a specific concept or disables descendants for exact-code matching.
+
+`POST /api/clinical-search` with `action: "search"` and `query` grounds and searches automatically; `action: "ground"` returns scopes without searching. For refinements, send the returned `plan` and `resolved`, whose clause values are arrays of up to 40 concept IDs (single-code strings remain accepted). Every selected ID must be active in the configured release. The server queries confirmed `grounded_notes.codings` with `$elemMatch`, applying concept, assertion, subject and accepted status to the same coding. It never searches note text. "Without" excludes any matching coding in the condition's scope and is distinct from a documented negative finding. Phrase retrieval remains bounded by the curated projection; lower-ranked suggestions are available for refinement.
+
+The screen shows the searchable and synthetic note counts and offers 22 example requests in English and Spanish, grouped into simple, complex, and context searches. Queries support nested AND/OR groups, exclusions, suspected versus confirmed findings, documented absence, family/past history, planned procedures, age ranges, sex, recent encounters, and encounter setting. Recognized "Find notes…" / "Busca notas…" wording uses the fast validated parser; freer prose uses the configured language model. `planner: "language-model"` can force that planner for evaluation. Root-level plan `filters` accepts `minAge`, `maxAge`, `sex`, `sinceDays`, and `setting`; recency refers to `encounter.occurredAt`. Repeated terminology candidates are cached for five minutes, while clinical records are queried afresh.
+
+Relative dates default to **Demo reference**, shown beside the query controls. Generated notes in the pinned release use their stored `demoReferenceDate`, so "last 30/90 days" examples stay stable as calendar time passes. Other saved notes use today's date. Select **Today**, or send `dateMode: "today"`, to use the current date for all records; `dateMode: "demo"` is the API default. Responses include the effective `dateContext`. Without a synthetic dataset reference, searches use today. Legacy generated notes derive the reference from their newest encounter plus the generator's minimum encounter offset.
+
+### Synthetic clinical note corpus
+
+`npm run notes:seed -- --dry-run` validates the source concepts and previews the corpus. `npm run notes:seed` adds or refreshes 512 synthetic notes across 32 clinical profiles, with 256 notes in each language. These cover metabolic, cardiac, respiratory, oncology, neurological, surgical, and screening scenarios, including contrasting negative, suspected, historical, family, and planned facts. Prose is rendered from the coded facts, and every coding receives its active licensed-release concept and complete ancestry. Age and encounter-date variants support the richer query examples. Notes are explicitly labeled synthetic, use stable IDs, and are rerunnable without duplicates; existing manually saved notes retain their own IDs and content.
+
+With the demo running, `npm run notes:verify` checks all 22 examples in both languages against the coded corpus, including false positives and missed matches. Set `CLINICAL_QA_URL` when the app uses a port other than 3015. The seeder preserves the existing dataset reference and encounter dates by default; no daily refresh is required. Use `npm run notes:seed -- --refresh-dates` only when deliberately resetting the synthetic dataset to the current date, or add `--dry-run` to preview that reset.
+
+New clinical concepts are included in `terms:ensure-demo` and the curated term rebuild. Refresh that projection with `TERMS_ENSURE_APPLY=true npm run terms:ensure-demo` when setting up another environment. All built-in searches are intended to return real matches from the seeded corpus. Unsupported, contradictory, or unrelated requests can correctly return no matches; the search never creates notes to satisfy a query. `GET /api/clinical-search` returns corpus counts, and results expose clinical context and the complete note for inspection.
+
+Run `npm run terms:ensure-demo` to audit required concept coverage, or `TERMS_ENSURE_APPLY=true npm run terms:ensure-demo` to refresh those concepts without rebuilding the capped branches.
+
+The default demo projection includes `lib/demo-concept-requirements.js` alongside its capped hierarchy branches. Required codes include gold fixtures and active concepts verified for the note/search examples. Only FSNs and synonyms become searchable rows; definitions remain in embedding context and the concept's Descriptions view. Automatic Voyage embedding uses the existing vector index.
+
+## Embedded Code Mappings
+
+Concepts may hold `mappings[]` with target system/version, RF2 refset/member ID, target code, groups, priorities, rules, advice and effective time. Forward translation reads that document. Reverse translation uses a multikey index on the same embedded fields and returns candidates from a directional map.
+
+Import a licensed **Snapshot map file** containing `mapTarget`:
+
+```bash
+npm run mappings:import -- --file /path/to/der2_iisssccRefset_ExtendedMapSnapshot.txt --target-system http://hl7.org/fhir/sid/icd-10 --target-version 2016
+```
+
+The importer updates only concepts in the demo projection and preserves other map products. Supply the actual classification/version for each file; ICD-10, ICD-10-CM and CIE-10-ES must not be conflated. Membership-only resource files cannot populate target codes. The translation view and FHIR R4 subset return published candidates with rules/advice; they do not evaluate unrestricted clinical rules or automatically assign billing codes.
+
+The graph's **Explore ancestors** action executes a release-scoped `$graphLookup` for one to five levels. The viewport fits after completed nodes are measured and when the details panel resizes the canvas.
+
+`npm run mappings:fetch-demo` can obtain only the required demo concepts' published map members from a Snowstorm service, pinned to the terminology release. Configure `SNOMED_MAP_SERVICE_URL`, `SNOMED_MAP_BRANCH`, `SNOMED_MAP_REFSET` and, if required, `SNOMED_MAP_SERVICE_TOKEN` for a service you are authorized to use. The official public browser returned HTTP 423 during this update. Official map downloads are available through SNOMED International's [MLDS/National Release Centre distribution](https://www.snomed.org/maps); use the licensed Snapshot file with `mappings:import`. No map targets are inferred from names or refset membership.
+
+
+## Planned semantic interoperability phase — postponed
+
+The [deferred demo phase plan](docs/SEMANTIC_INTEROPERABILITY_DEMO_PLAN.md) describes versioned terminology mappings, FHIR Condition and legacy ingestion, contextual semantic projections, query refinement, and later observation/medication workflows. It is planning documentation only; implementation resumes on an explicit user request.
+
+## Releasing this demo
+
+See [the demo release checklist](docs/DEMO_RELEASE_CHECKLIST.md) for the verified database inventory, runtime model roster and staging approval steps. Run `npm run demo:verify` with the deployment database settings before release; application commits do not migrate MongoDB contents or Atlas indexes.

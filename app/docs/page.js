@@ -27,7 +27,7 @@ const workflowCards = [
   },
   {
     title: "Ground Notes",
-    points: ["Evidence-grounded spans", "Accepted / review / abstain", "Proposed principal diagnosis", "No silent coding"]
+    points: ["Evidence-grounded spans", "Accepted / review / abstain", "Proposed principal diagnosis + comorbidities", "Hierarchy-aware: one problem, one code", "No silent coding"]
   },
   {
     title: "Operate",
@@ -49,12 +49,13 @@ const outOfScope = [
   "Full Athena-style warehouse browser",
   "Ontology-distance ranking as the default",
   "Automatic code assignment without human review",
-  "Refset, binding, mapping, patient cohort, or secondary-use workflows"
+  "Refset authoring, binding, patient cohort dashboards, or secondary-use pipelines"
 ];
 
 const doneChecklist = [
   "Users can find and confirm the right concept deterministically",
-  "The note workflow proposes a principal diagnosis with visible evidence",
+  "The note workflow proposes a principal diagnosis and comorbidities with visible evidence",
+  "Principal-diagnosis accuracy is measured against gold notes, not tuned by eye",
   "Confirmed diagnoses can be persisted as grounded clinical knowledge",
   "Retired workflow collections are not required by app code",
   "The product remains fast, understandable, and stable"

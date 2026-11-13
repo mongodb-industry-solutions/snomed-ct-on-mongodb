@@ -1,0 +1,24 @@
+{
+  "capturedAt": "2026-11-12T16:21:03.614Z",
+  "baseUrl": "http://localhost:3015",
+  "sourceHash": "29f78fd5842cae8e95c75c2a457ce681d5a456a0b2760fb3a0f7e442830ad3c9",
+  "exampleCount": 16,
+  "modes": [
+    "hybrid"
+  ],
+  "extractedOncePerNote": true,
+  "noSavedCodings": true,
+  "failures": [],
+  "status": "captured_requires_semantic_review",
+  "semanticPolicies": [
+    "source-entailment-v4",
+    "source-entailment-v5"
+  ],
+  "diagnosisReplayPolicy": "source-priority-v4",
+  "targetedReruns": [
+    "ex-hf-en",
+    "ex-hf-es",
+    "ex-full-report-en"
+  ],
+  "aggregation": "Final all-example capture plus targeted regressions. Unchanged semantic inputs were retained; the diagnosis stage was replayed over every captured result."
+}

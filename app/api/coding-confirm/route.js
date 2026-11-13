@@ -1,5 +1,5 @@
 import { getCollection } from "@/lib/mongo";
-import { getMongoConfig } from "@/lib/config";
+import { getMongoConfig, getSemanticsConfig } from "@/lib/config";
 import { fetchConceptSummaries } from "@/lib/concept-summaries";
 import { buildMongoErrorPayload } from "@/lib/mongo-error";
 import { elapsedMs, fail, ok, parseJson } from "@/lib/http";
@@ -29,8 +29,10 @@ export async function POST(request) {
 
     const { sourceCollection } = getMongoConfig();
     const source = await getCollection(sourceCollection);
+    const { releaseId } = getSemanticsConfig();
     const conceptIds = Array.from(new Set(inputCodings.map((c) => String(c.conceptId)).filter(Boolean)));
-    const summaries = await fetchConceptSummaries({ sourceCollection: source, conceptIds, languageCode });
+    const summaries = await fetchConceptSummaries({ sourceCollection: source, conceptIds, languageCode, releaseId });
+    if (summaries.some(summary => summary.active !== true || summary.releaseId !== releaseId)) return fail("Every confirmed code must exist and be active in the configured terminology release.", 400, { code: "unsupported-release-coding" });
     const ancById = new Map(summaries.map((s) => [String(s.conceptId), Array.isArray(s.ancestorIds) ? s.ancestorIds : [String(s.conceptId)]]));
 
     const codings = inputCodings.map((c) => {
@@ -44,6 +46,14 @@ export async function POST(request) {
         target: c.target || "Condition.code",
         assertion: c.assertion || "present",
         subject: c.subject || "patient",
+        releaseId,
+        temporality: c.temporality || null,
+        workflow: c.workflow || null,
+        kind:c.kind||null,
+        clinicalStatus:c.clinicalStatus||'unknown',
+        sourceSpans:c.sourceSpans||[],
+        attributeConflicts:c.attributeConflicts||null,
+        attributes: c.attributes || {},
         status: "accepted",
         evidence: c.evidence || null,
         ancestorIds: ancById.get(conceptId) || [conceptId]
@@ -55,6 +65,7 @@ export async function POST(request) {
       languageCode,
       text,
       codings,
+      releaseId,
       recordedAt: new Date().toISOString(),
       createdAt: new Date()
     };

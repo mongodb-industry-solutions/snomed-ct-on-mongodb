@@ -1,14 +1,18 @@
 import { createHash } from "node:crypto";
 
 import { getCollection } from "@/lib/mongo";
-import { getMongoConfig, getSearchConfig, getSemanticsConfig, getHybridSearchConfig, getLlmConfig } from "@/lib/config";
-import { extractMentionsWithLlm, llmMentionContext } from "@/lib/clinical-extract";
+import { getMongoConfig, getSearchConfig, getSemanticsConfig, getHybridSearchConfig } from "@/lib/config";
+import { getRuntimeLlmConfig, withLlmModel } from "@/lib/runtime-llm-config";
+import { extractMentionsWithLlm, llmMentionContext, EXTRACTION_POLICY_VERSION } from "@/lib/clinical-extract";
+import { normalizeExtractedMentions, anchorMentions } from "@/lib/clinical-mentions";
+import { verifyGroundingSemantics, SEMANTIC_POLICY_VERSION } from "@/lib/semantic-grounding";
+import { buildExactTermPipeline, exactDescriptionMatch, candidateKindCompatible, compareGroundingEvidence } from "@/lib/grounding-policy";
 import { resolveSemanticScope } from "@/lib/semantic-scope";
 import { buildNavigatorSearchPipeline } from "@/lib/pipelines";
-import { runHybridSearch } from "@/lib/hybrid-search";
+import { describeHybridTuning, resolveHybridTuning, runHybridSearch, traceStep, tracedAggregate } from "@/lib/hybrid-search";
 import { ensureSearchIndexReady } from "@/lib/search-readiness";
 import { buildMongoErrorPayload } from "@/lib/mongo-error";
-import { computePrimaryDiagnosisCandidates } from "@/lib/principal-diagnosis";
+import { computeDiagnosisProposal, DIAGNOSIS_POLICY_VERSION } from "@/lib/principal-diagnosis";
 import { buildSearchQueryVariants, rerankNavigatorResults } from "@/lib/search-normalization";
 import { emitUsageEventSafe } from "@/lib/usage-events";
 import { elapsedMs, fail, ok, parseJson } from "@/lib/http";
@@ -369,7 +373,9 @@ function buildExactPhraseLookupPipeline({
   });
 
   const filter = [
-    { equals: { path: "active", value: true } }
+    { equals: { path: "active", value: true } },
+    { equals: { path: "conceptActive", value: true } },
+    { in: { path: "typeId", value: ["900000000000003001", "900000000000013009"] } }
   ];
 
   if (releaseId && releaseId !== "latest") {
@@ -398,8 +404,11 @@ function buildExactPhraseLookupPipeline({
       $project: {
         _id: 0,
         conceptId: 1,
+        descriptionId: 1,
         term: "$displayTerm",
         fsn: 1,
+        synonyms: 1,
+        typeId: 1,
         semanticTag: 1,
         languageCode: 1,
         active: 1,
@@ -720,7 +729,11 @@ function deriveContextFromSignals(signals) {
     };
   }
 
-  if (items.some((signal) => signal.cueType === "history")) {
+  // A "History:" header alone doesn't make a condition past: past medical
+  // history lists chronic problems that are still active (comorbidities). Only
+  // a sentence cue ("history of", "previous", "resolved") marks it historical;
+  // the section still lowers its weight as a principal-diagnosis candidate.
+  if (items.some((signal) => signal.cueType === "history" && signal.source !== "section")) {
     return {
       assertion: "historical",
       contextType: "history",
@@ -954,7 +967,7 @@ function extractCandidatePhrases(text, maxPhrases) {
 // words, so synthesize the equivalent evidence-cue signals (negation / history /
 // family / plan / certainty). This makes the evidence graph render the same
 // context bubble on top of each mention as the deterministic path does.
-function synthLlmSignals(ctx, start, end) {
+function synthLlmSignals(ctx) {
   const map = {
     negated: { cueType: "negation", value: "absent", text: "negated" },
     "family-history": { cueType: "family-history", value: "family", text: "family history" },
@@ -964,7 +977,7 @@ function synthLlmSignals(ctx, start, end) {
   };
   const s = map[ctx.contextType];
   if (!s) return [];
-  return [{ ...s, start, end, source: "llm" }];
+  return [{ ...s, start: null, end: null, source: "llm-inferred" }];
 }
 
 // Turn LLM-extracted mentions into the same phrase-entry shape the grounding
@@ -972,29 +985,16 @@ function synthLlmSignals(ctx, start, end) {
 // LLM supplies the phrase and its context (assertion/subject/temporality); we
 // locate the verbatim span in the note for evidence highlighting.
 function buildLlmPhraseEntries(text, mentions, maxPhrases) {
-  const lowerText = text.toLowerCase();
   const entries = [];
-  const seen = new Set();
-  for (const m of mentions.slice(0, maxPhrases)) {
+  const sections = buildSectionRanges(text);
+  for (const m of anchorMentions(text, normalizeExtractedMentions(mentions), sections).slice(0, maxPhrases)) {
     const phrase = String(m.phrase || "").trim();
     const normalizedPhrase = normalizeText(phrase);
     if (!normalizedPhrase) continue;
-    // Dedupe by phrase + subject + assertion so a distinct occurrence of the
-    // same term survives (e.g. the patient's diabetes AND "mother with diabetes"
-    // in family history) — keying on phrase alone silently drops the family one.
-    const dedupeKey = `${normalizedPhrase}|${m.subject || "patient"}|${m.assertion || "present"}`;
-    if (seen.has(dedupeKey)) continue;
-    seen.add(dedupeKey);
-
-    const needle = String(m.verbatim || phrase).toLowerCase();
-    let start = needle ? lowerText.indexOf(needle) : -1;
-    if (start < 0) start = lowerText.indexOf(normalizedPhrase);
-    const spanLen = start >= 0 ? (m.verbatim || phrase).length : phrase.length;
-    const safeStart = start >= 0 ? start : 0;
-    const end = safeStart + spanLen;
-
-    const lineStart = start >= 0 ? text.lastIndexOf("\n", start) + 1 : 0;
-    let lineEnd = start >= 0 ? text.indexOf("\n", start) : -1;
+    const start = m.start;
+    const end = m.end;
+    const lineStart = start != null ? text.lastIndexOf("\n", start) + 1 : 0;
+    let lineEnd = start != null ? text.indexOf("\n", start) : -1;
     if (lineEnd < 0) lineEnd = text.length;
 
     const tokenCount = normalizedPhrase.split(/\s+/).filter(Boolean).length;
@@ -1002,19 +1002,28 @@ function buildLlmPhraseEntries(text, mentions, maxPhrases) {
     entries.push({
       phrase,
       normalizedPhrase,
-      start: safeStart,
+      start,
       end,
       tokenCount,
-      section: "note",
-      sectionSlug: "note",
+      section: m.sourceSection?.title || m.section || "Note",
+      sectionSlug: m.sourceSection?.slug || m.section || "note",
+      sectionStart: m.sourceSection?.start ?? null,
       sentence: text.slice(lineStart, lineEnd) || phrase,
       sentenceStart: lineStart,
       sentenceEnd: lineEnd,
-      evidenceSignals: synthLlmSignals(ctx, safeStart, end),
+      evidenceSignals: synthLlmSignals(ctx, start, end),
       anchorRole: "clinical-term",
       candidateScore: scorePhraseCandidate({ normalizedPhrase, tokenCount, contextType: ctx.contextType }),
       verbatim: m.verbatim || phrase,
       llmSection: m.section || "other",
+      kind: m.kind,
+      workflow: m.workflow,
+      clinicalStatus: m.clinicalStatus,
+      sourceSentence: m.sourceSentence,
+      attributes: m.attributes,
+      temporality: m.temporality,
+      contextReviewReasons: m.contextReviewReasons || [],
+      evidenceStatus: m.evidenceStatus,
       ...ctx
     });
   }
@@ -1035,19 +1044,26 @@ function summarizeCandidate(candidate, normalizedPhrase) {
   if (!candidate) return null;
   return {
     conceptId: candidate.conceptId,
+    descriptionId: candidate.descriptionId || null,
     term: candidate.term,
     fsn: candidate.fsn || null,
     semanticTag: candidate.semanticTag || null,
     languageCode: candidate.languageCode || null,
     ancestorIds: Array.isArray(candidate.ancestorIds) ? candidate.ancestorIds.map(String) : [],
     active: candidate.active !== false,
+    releaseId: candidate.releaseId || null,
     score: Number.isFinite(Number(candidate.score)) ? Number(candidate.score) : 0,
     highlights: Array.isArray(candidate.highlights) ? candidate.highlights : [],
     scoreDetails: candidate?.scoreDetails || null,
     matchedBy: inferMatchMode(candidate, normalizedPhrase),
     matchedText: candidate?.matchedText || candidate?.term || null,
     matchReason: candidate?.matchReason || null,
-    matchTier: Number.isFinite(Number(candidate?.matchTier)) ? Number(candidate.matchTier) : null
+    matchTier: Number.isFinite(Number(candidate?.matchTier)) ? Number(candidate.matchTier) : null,
+    // Hybrid provenance (absent on lexical-only grounding): which engines found
+    // it, the per-engine fusion breakdown, and the rerank score.
+    foundBy: Array.isArray(candidate?.foundBy) ? candidate.foundBy : null,
+    fusion: candidate?.fusion || null,
+    rerankScore: typeof candidate?.rerankScore === "number" ? candidate.rerankScore : null
   };
 }
 
@@ -1134,12 +1150,15 @@ function rerankGroundingMatches(entry, matches) {
       const analysis = analyzeGroundingCandidate(entry, candidate);
       return {
         ...candidate,
+        _fullDescriptionMatch: Boolean(exactDescriptionMatch(entry.phrase, candidate)),
         _groundingIndex: index,
         _groundingScore: analysis.groundingScore,
         _groundingFlags: analysis.flags
       };
     })
     .sort((left, right) => {
+      const evidenceDiff = compareGroundingEvidence(left, right);
+      if (evidenceDiff !== 0) return evidenceDiff;
       const groundingDiff = Number(right?._groundingScore || 0) - Number(left?._groundingScore || 0);
       if (groundingDiff !== 0) return groundingDiff;
 
@@ -1160,7 +1179,8 @@ function rerankGroundingMatches(entry, matches) {
 }
 
 function buildReviewOutcome(entry) {
-  const matches = rerankGroundingMatches(entry, entry.matches);
+  const matches = mergeCandidatesByConcept(rerankGroundingMatches(entry, entry.matches))
+    .filter(candidate => candidateKindCompatible(entry, candidate));
   const topMatch = matches[0] || null;
   const topCandidate = summarizeCandidate(topMatch, entry.normalizedPhrase);
   const alternatives = matches.slice(1, 4).map((candidate) => summarizeCandidate(candidate, entry.normalizedPhrase)).filter(Boolean);
@@ -1270,13 +1290,19 @@ function buildReviewOutcome(entry) {
     status = "accepted";
   }
 
-  if (status === "accepted") reasons.push(exactMatch ? "exact-clinical-match" : "high-confidence-match");
+  const fullDescription = exactDescriptionMatch(entry.phrase, topMatch);
+  const exactConceptCount = new Set(matches.filter(candidate => exactDescriptionMatch(entry.phrase, candidate)).map(candidate => String(candidate.conceptId))).size;
+  if (status === "accepted" && !fullDescription) status = "review";
+  if (exactConceptCount > 1) { status = "review"; reasons.push("ambiguous-full-description"); }
+  if (!fullDescription) reasons.push("full-description-match-not-established");
+  if (status === "accepted") reasons.push("exact-clinical-match");
   if (status === "review" && reasons.length === 0) reasons.push("manual-review-required");
   if (status === "abstain" && reasons.length === 0) reasons.push("low-confidence");
 
   return {
     ...entry,
     status,
+    mappingStatus: status === "accepted" ? "supported-description-match" : "needs-review",
     evidenceType: status === "accepted" ? "direct" : "inferred",
     confidence,
     confidencePct: Math.round(confidence * 100),
@@ -1346,8 +1372,8 @@ function buildEvidenceGraph({
       sectionIdBySlug.get(String(entry?.sectionSlug || "")) ||
       sectionIdByTitle.get(String(entry?.section || "")) ||
       "sec-note";
-    const spanStart = Number(entry?.span?.start ?? entry?.start ?? null);
-    const spanEnd = Number(entry?.span?.end ?? entry?.end ?? null);
+    const spanStart = entry?.span?.start ?? entry?.start ?? null;
+    const spanEnd = entry?.span?.end ?? entry?.end ?? null;
     const anchorText = String(entry?.span?.text || entry?.phrase || "").trim();
     const anchorSpan = {
       spanId: `sp-anchor-${mentionId}`,
@@ -1406,8 +1432,8 @@ function buildEvidenceGraph({
     mentionsBySentence.get(sentenceId).push(mention);
 
     for (const signal of Array.isArray(entry?.evidenceSignals) ? entry.evidenceSignals : []) {
-      const cueStart = Number(signal?.start);
-      const cueEnd = Number(signal?.end);
+      const cueStart = signal?.start ?? null;
+      const cueEnd = signal?.end ?? null;
       const cueKey = [
         sentenceId,
         signal?.cueType || "cue",
@@ -1614,11 +1640,20 @@ async function mapWithConcurrency(items, concurrency, iteratee) {
   return results;
 }
 
+function countBy(values) {
+  const counts = {};
+  for (const v of values) counts[v || "unknown"] = (counts[v || "unknown"] || 0) + 1;
+  return counts;
+}
+
 function shouldSkipPhraseLookup(phraseEntry) {
+  if (phraseEntry.evidenceStatus === "unanchored" || phraseEntry.kind === "context") return true;
+  if (phraseEntry.kind) return false;
   return Number(phraseEntry?.candidateScore || 0) < 4;
 }
 
 function shouldSkipSearchFallback(phraseEntry) {
+  if (phraseEntry.kind && phraseEntry.kind !== "context") return false;
   const tokens = normalizeText(phraseEntry?.phrase).split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return true;
   if (tokens.length === 1 && tokens[0].length < 7) return true;
@@ -1666,6 +1701,9 @@ function normalizeHybridMatch(r) {
     displayTerm: r.displayTerm || r.term,
     preferredTerm: r.preferredTerm,
     fsn: r.fsn,
+    synonyms: r.synonyms || [],
+    descriptionId: r.descriptionId,
+    ancestorIds: r.ancestorIds || [],
     semanticTag: r.semanticTag,
     languageCode: r.languageCode,
     matchedText: r.matchedText || r.term,
@@ -1674,10 +1712,14 @@ function normalizeHybridMatch(r) {
     isPreferred: Boolean(r.isPreferred),
     termRank: Number(r.termRank || 0),
     active: r.active !== false,
+    conceptActive:r.conceptActive,
+    releaseId:r.releaseId,
     score: rr != null ? rr * 100 : (typeof r.vectorScore === "number" ? r.vectorScore * 100 : Number(r.rrfScore || 0) * 1000),
     rerankScore: rr,
     vectorScore: typeof r.vectorScore === "number" ? r.vectorScore : null,
-    foundBy: r.foundBy
+    foundBy: r.foundBy,
+    fusion: r.fusion || null,
+    fusedRank: r.fusedRank ?? null
   };
 }
 
@@ -1695,6 +1737,18 @@ function mergeCandidatesByConcept(...lists) {
   return merged;
 }
 
+// Grounding runs one hybrid search per mention, so by default it uses the
+// smaller per-phrase pool. Session tuning still applies: an explicit
+// candidatePool / rerankPool from the caller overrides the grounding pool.
+function groundingHybridConfig(baseConfig, tuning) {
+  const withGroundingPools = {
+    ...baseConfig,
+    candidatePool: baseConfig.groundingCandidatePool,
+    rerankPool: baseConfig.groundingCandidatePool
+  };
+  return resolveHybridTuning(withGroundingPools, tuning);
+}
+
 async function resolvePhrase(
   collection,
   {
@@ -1708,7 +1762,8 @@ async function resolvePhrase(
     searchTimeoutMs,
     perPhraseLimit,
     includeScoreDetails,
-    hybridOverride
+    hybridOverride,
+    hybridConfig
   }
 ) {
   if (shouldSkipPhraseLookup(phraseEntry)) {
@@ -1717,7 +1772,7 @@ async function resolvePhrase(
       span: {
         start: phraseEntry.start,
         end: phraseEntry.end,
-        text: phraseEntry.phrase
+        text: phraseEntry.verbatim || phraseEntry.phrase
       },
       strategy: "skipped-anchor",
       matches: []
@@ -1731,6 +1786,7 @@ async function resolvePhrase(
     releaseId,
     limit: perPhraseLimit
   });
+  const directPipeline = buildExactTermPipeline({ phrase: phraseEntry.phrase, languageCode, releaseId, conceptIdScope, areaConceptId });
   const searchPipeline = buildNavigatorSearchPipeline({
     query: phraseEntry.phrase,
     limit: Math.min(Math.max(perPhraseLimit * 3, perPhraseLimit), 16),
@@ -1745,15 +1801,26 @@ async function resolvePhrase(
   const span = {
     start: phraseEntry.start,
     end: phraseEntry.end,
-    text: phraseEntry.phrase
+    text: phraseEntry.verbatim || phraseEntry.phrase
   };
-  const hybridCfg = getHybridSearchConfig();
+  const hybridCfg = hybridConfig || groundingHybridConfig(getHybridSearchConfig());
   const useHybrid = typeof hybridOverride === "boolean" ? hybridOverride : hybridCfg.groundingEnabled;
+  // Every step this mention actually runs, in order (see traceStep). Returned
+  // as `trace` so the UI shows the real pipelines, not a reconstruction.
+  const trace = [];
+  const done = (result) => ({ ...result, trace });
 
   try {
     let exactResults = [];
     try {
-      const exactRawResults = await collection.aggregate(exactPipeline, { maxTimeMS: Math.min(searchTimeoutMs, 900) }).toArray();
+      const directResults = await tracedAggregate(collection, directPipeline, { maxTimeMS: searchTimeoutMs }, trace, {
+        role: "exact-term-lookup", label: "Exact description — indexed MongoDB lookup"
+      });
+      const exactRawResults = directResults.length ? directResults : await tracedAggregate(collection, exactPipeline, { maxTimeMS: searchTimeoutMs }, trace, {
+        role: "exact-lookup",
+        label: "Exact lookup — MongoDB Search (phrase + autocomplete)",
+        params: { variants: buildSearchQueryVariants(phraseEntry.phrase).slice(0, 4) }
+      });
       exactResults = rerankNavigatorResults({
         query: phraseEntry.phrase,
         results: scopeTruncated ? exactRawResults : applyScopePostFilter(exactRawResults, conceptIdScope),
@@ -1763,8 +1830,17 @@ async function resolvePhrase(
       // Legacy path: exact lexical hit wins outright. With hybrid grounding on,
       // we instead fold exact hits into the fused pool below so a strong
       // semantic candidate can compete with a weak exact-token match.
-      if (!useHybrid && exactResults.length > 0) {
-        return { ...phraseEntry, span, strategy: "exact-lookup", matches: exactResults };
+      traceStep(trace, {
+        kind: "app",
+        role: "lexical-tiering",
+        label: "Match tiering (in the app)",
+        outcome: "ok",
+        detail: `Classified ${exactRawResults.length} hits by how they matched (exact preferred term, synonym, FSN, partial…) and kept the best ${exactResults.length}.`,
+        rows: exactResults.length
+      });
+      if (!useHybrid && exactResults.some(candidate => exactDescriptionMatch(phraseEntry.phrase, candidate))) {
+        traceStep(trace, { kind: "app", role: "decision", label: "Decision", outcome: "ok", detail: "Lexical mode and the exact lookup found matches — they are used directly; no further search runs." });
+        return done({ ...phraseEntry, span, strategy: directResults.length ? "exact-term-lookup" : "exact-lookup", matches: exactResults });
       }
     } catch (error) {
       if (!isQueryTimeoutError(error)) {
@@ -1777,31 +1853,44 @@ async function resolvePhrase(
         const hybrid = await runHybridSearch({
           collection,
           query: phraseEntry.phrase,
+          vectorQuery: [phraseEntry.phrase,phraseEntry.sourceSentence||phraseEntry.sentence].filter(Boolean).join('\n'),
           languageCode,
           effectiveReleaseId: releaseId,
           areaConceptId,
           conceptIdScope,
           textIndex,
           searchConfig: getSearchConfig(),
-          hybridConfig: {
-            ...hybridCfg,
-            candidatePool: hybridCfg.groundingCandidatePool,
-            rerankPool: hybridCfg.groundingCandidatePool
-          },
-          limit: Math.max(perPhraseLimit * 3, 8)
+          hybridConfig: hybridCfg,
+          limit: Math.max(perPhraseLimit * 3, 8),
+          trace
         });
         const hybridMatches = (hybrid.results || []).map(normalizeHybridMatch);
         // Exact lexical hits first (most precise), then fused/reranked semantic
         // candidates; the grounding scorer re-ranks the merged pool and applies
         // its negation/laterality/over-specific safeguards.
-        const merged = mergeCandidatesByConcept(exactResults, hybridMatches);
+        // An exact hit that hybrid also found keeps its lexical scoring but
+        // picks up the hybrid provenance, so the UI can show its fusion breakdown.
+        const hybridById = new Map(hybridMatches.map((m) => [String(m.conceptId), m]));
+        const exactWithProvenance = exactResults.map((r) => {
+          const h = hybridById.get(String(r.conceptId));
+          return h ? { ...r, foundBy: h.foundBy, fusion: h.fusion, fusedRank: h.fusedRank, rerankScore: h.rerankScore } : r;
+        });
+        const merged = mergeCandidatesByConcept(exactWithProvenance, hybridMatches);
+        traceStep(trace, {
+          kind: "app",
+          role: "merge",
+          label: "Merge exact hits with hybrid candidates",
+          outcome: "ok",
+          detail: `${exactResults.length} exact hit(s) first, then ${hybridMatches.length} hybrid candidate(s); duplicates collapse to one row per concept → ${merged.length} candidates for the grounding scorer.`,
+          rows: merged.length
+        });
         if (merged.length > 0) {
-          return {
+          return done({
             ...phraseEntry,
             span,
             strategy: hybrid.reranked ? "hybrid-rerank" : "hybrid-fusion",
             matches: merged
-          };
+          });
         }
       } catch (error) {
         if (!isQueryTimeoutError(error)) {
@@ -1810,53 +1899,70 @@ async function resolvePhrase(
       }
     }
 
+    if (useHybrid && shouldSkipSearchFallback(phraseEntry)) {
+      traceStep(trace, { kind: "app", role: "decision", label: "Decision", outcome: "skipped", detail: "Hybrid search skipped: the phrase is too short or too weak a clinical signal to search broadly." });
+    }
+
     // Hybrid disabled/skipped/empty: fall back to exact hits if any.
     if (exactResults.length > 0) {
-      return { ...phraseEntry, span, strategy: "exact-lookup", matches: exactResults };
+      return done({ ...phraseEntry, span, strategy: "exact-lookup", matches: exactResults });
     }
 
     if (shouldSkipSearchFallback(phraseEntry)) {
-      return {
+      traceStep(trace, { kind: "app", role: "decision", label: "Decision", outcome: "skipped", detail: "No exact match, and the phrase is too short or weak for a broad search — left unmapped." });
+      return done({
         ...phraseEntry,
         span: {
           start: phraseEntry.start,
           end: phraseEntry.end,
-          text: phraseEntry.phrase
+          text: phraseEntry.verbatim || phraseEntry.phrase
         },
         strategy: "skipped-anchor",
         matches: []
-      };
+      });
     }
 
-    const rawResults = await collection.aggregate(searchPipeline, { maxTimeMS: searchTimeoutMs }).toArray();
+    const rawResults = await tracedAggregate(collection, searchPipeline, { maxTimeMS: searchTimeoutMs }, trace, {
+      role: "lexical-search",
+      label: "Broad lexical search — MongoDB Search",
+      params: { variants: buildSearchQueryVariants(phraseEntry.phrase) }
+    });
     const results = rerankNavigatorResults({
       query: phraseEntry.phrase,
       results: rawResults,
       limit: perPhraseLimit
     });
-    return {
+    traceStep(trace, {
+      kind: "app",
+      role: "lexical-tiering",
+      label: "Match tiering (in the app)",
+      outcome: "ok",
+      detail: `Classified ${rawResults.length} hits by how they matched and kept the best ${results.length}.`,
+      rows: results.length
+    });
+    return done({
       ...phraseEntry,
       span: {
         start: phraseEntry.start,
         end: phraseEntry.end,
-        text: phraseEntry.phrase
+        text: phraseEntry.verbatim || phraseEntry.phrase
       },
       strategy: "mongodb-search",
       matches: results
-    };
+    });
   } catch (error) {
     if (isQueryTimeoutError(error)) {
-      return {
+      return done({
         ...phraseEntry,
         span: {
           start: phraseEntry.start,
           end: phraseEntry.end,
-          text: phraseEntry.phrase
+          text: phraseEntry.verbatim || phraseEntry.phrase
         },
         strategy: "mongodb-timeout",
         matches: [],
         error: error instanceof Error ? error.message : String(error)
-      };
+      });
     }
 
     throw error;
@@ -1879,22 +1985,33 @@ export async function POST(request) {
     // "hybrid" forces hybrid fusion, "lexical" forces deterministic lexical,
     // anything else keeps the configured default.
     const searchModeOverride = body.searchMode === "hybrid" ? true : body.searchMode === "lexical" ? false : undefined;
+    // Optional session tuning for hybrid grounding (weights, fusion mode,
+    // pools, rerank) — the same knobs as the navigator search.
+    const hybridConfig = groundingHybridConfig(getHybridSearchConfig(), body.tuning);
+    const usesHybridGrounding = typeof searchModeOverride === "boolean" ? searchModeOverride : hybridConfig.groundingEnabled;
     const forceScopeRefresh = body.forceScopeRefresh === true;
     const developerMode = body.developerMode === true;
-    const maxPhrases = Math.min(Math.max(Number(body.maxPhrases) || 20, 1), 40);
-    const requestedTimeoutMs = Math.min(Math.max(Number(body.searchTimeoutMs) || 1500, 250), 15000);
+    const maxPhrases = Math.min(Math.max(Number(body.maxPhrases) || 80, 1), 200);
+    const requestedTimeoutMs = Math.min(Math.max(Number(body.searchTimeoutMs) || 8000, 250), 15000);
 
     if (!text) {
       return fail("text is required", 400);
     }
 
+    const llmCfg = await getRuntimeLlmConfig();
+    if (body.model != null && typeof body.model !== "string") return fail("A model selection must be a model ID.", 400, { code: "invalid-model-selection" });
+    const modelOverride = typeof body.model === "string" ? body.model.trim() : "";
+    if (llmCfg.enabled) {
+      try { withLlmModel(llmCfg, modelOverride); }
+      catch (error) { return fail(error.message, error.status, { code: error.code }); }
+    }
     const { projectionCollection } = getMongoConfig();
     const { textIndex } = getSearchConfig();
     const { releaseId: defaultReleaseId } = getSemanticsConfig();
 
-    const collection = await getCollection(projectionCollection);
+    const collection = body.extractOnly === true ? null : await getCollection(projectionCollection);
 
-    const searchReadiness = await ensureSearchIndexReady({
+    const searchReadiness = body.extractOnly === true ? { ok: true } : await ensureSearchIndexReady({
       collection,
       indexName: textIndex
     });
@@ -1906,7 +2023,7 @@ export async function POST(request) {
       });
     }
 
-    const { conceptIdScope, scope } = await resolveSemanticScope({
+    const { conceptIdScope, scope } = body.extractOnly===true ? {conceptIdScope:[],scope:null} : await resolveSemanticScope({
       areaConceptId,
       ecl,
       releaseIdInput,
@@ -1915,7 +2032,7 @@ export async function POST(request) {
 
     const effectiveReleaseId = scope?.releaseId || releaseIdInput || defaultReleaseId || "latest";
     const profileSettings = PROFILE_SETTINGS[retrievalProfile] || PROFILE_SETTINGS.lexical_exact;
-    const searchTimeoutMs = Math.min(requestedTimeoutMs, profileSettings.timeoutCapMs);
+    const searchTimeoutMs = requestedTimeoutMs;
     const language = detectLanguage(text, requestedLanguageCode);
     const languageCode = language.detectedLanguageCode;
 
@@ -1934,7 +2051,18 @@ export async function POST(request) {
       // The extraction model changes the output, so it must key the cache —
       // otherwise a per-model benchmark returns the first model's cached run.
       extractor: body.extractor === "deterministic" ? "deterministic" : "llm",
-      model: typeof body.model === "string" ? body.model.trim() : ""
+      model: modelOverride || llmCfg.model,
+      // Retrieval settings change the candidates, so they key the cache too —
+      // otherwise re-grounding with new weights would replay the old run.
+      extractOnly: body.extractOnly === true,
+      groundMentions: Array.isArray(body.groundMentions) ? buildFingerprint({ mentions: body.groundMentions }) : null,
+      searchMode: usesHybridGrounding ? "hybrid" : "lexical",
+      tuning: usesHybridGrounding ? describeHybridTuning(hybridConfig) : null,
+      semanticPolicy: SEMANTIC_POLICY_VERSION,
+      retrievalPolicy:'source-context-v1',
+      diagnosisPolicy:DIAGNOSIS_POLICY_VERSION,
+      extractionPolicy:EXTRACTION_POLICY_VERSION,
+      semanticEnabled: llmCfg.enabled && process.env.ENABLE_SEMANTIC_GROUNDING !== 'false'
     });
 
     // Benchmark passes noCache so every cell is a real, timed call (a cache hit
@@ -1955,7 +2083,6 @@ export async function POST(request) {
     // patient-vs-family, typos far better than the deterministic layer). It
     // returns TEXT + CONTEXT only — MongoDB still retrieves every code below.
     // Falls back to deterministic extraction when the gateway is off or fails.
-    const llmCfg = getLlmConfig();
     const wantLlmExtract = llmCfg.enabled && body.extractor !== "deterministic";
     let sections;
     let candidatePhrases;
@@ -1965,9 +2092,9 @@ export async function POST(request) {
     let extractorUsage = null;
     let extractorPrompt = null;
     let extractorRaw = null;
+    let extractorRequests = null;
     const includeLlmIO = body.includeLlmIO === true;
 
-    const modelOverride = typeof body.model === "string" ? body.model.trim() : "";
     // The normalized mentions (evidence graph) — returned by extractOnly so the
     // client can hand them back for the separate retrieval step.
     let extractedMentions = null;
@@ -1986,7 +2113,7 @@ export async function POST(request) {
           extractorModel = ext.model;
           extractorUsage = ext.usage || null;
           extractedMentions = ext.mentions;
-          if (includeLlmIO) { extractorPrompt = ext.prompt || null; extractorRaw = ext.raw || null; }
+          if (includeLlmIO) { extractorPrompt = ext.prompt || null; extractorRaw = ext.raw || null; extractorRequests=ext.requests||null; }
           sections = buildSectionRanges(text);
           candidatePhrases = buildLlmPhraseEntries(text, ext.mentions, maxPhrases)
             .filter((entry) => shouldGroundPhraseForTarget(entry, targetContext));
@@ -2011,12 +2138,12 @@ export async function POST(request) {
 
     // extractOnly: return the evidence graph without grounding (fast Stage 1).
     if (body.extractOnly === true) {
-      const ungrounded = candidatePhrases.map((pe) => ({ ...pe, span: { start: pe.start, end: pe.end, text: pe.phrase }, strategy: "extract-only", matches: [] }));
+      const ungrounded = candidatePhrases.map((pe) => ({ ...pe, span: { start: pe.start, end: pe.end, text: pe.verbatim || pe.phrase }, strategy: "extract-only", matches: [] }));
       const reviewed = ungrounded.map(buildReviewOutcome).map((entry, index) => ({ ...entry, mentionId: buildMentionId(entry, index) }));
       const evidenceGraph = buildEvidenceGraph({ documentId: requestFingerprint, languageCode, releaseId: effectiveReleaseId, sections, results: reviewed });
       const gmap = new Map(evidenceGraph.mentions.map((m) => [m.mentionId, m]));
       const rwg = reviewed.map((e) => { const m = gmap.get(e.mentionId); return { ...e, cueIds: m?.appliedCueIds || [], relationIds: m?.relationIds || [], groundedNodeId: m?.groundedNodeId || null }; });
-      return ok({ ok: true, pattern: "nlp-map", extractOnly: true, retrieved: false, extractor, extractorModel, extractorError, extractorUsage, extractorPrompt, extractorRaw, languageCode, results: rwg, evidenceGraph, mentions: extractedMentions || [], latencyMs: elapsedMs(startedAt) });
+      return ok({ ok: true, pattern: "nlp-map", extractOnly: true, retrieved: false, extractionPolicy:EXTRACTION_POLICY_VERSION,extractor, extractorModel, extractorError, extractorUsage, extractorPrompt, extractorRaw,extractorRequests, languageCode, results: rwg, evidenceGraph, mentions: extractedMentions || [], latencyMs: elapsedMs(startedAt) });
     }
     const mapped = await mapWithConcurrency(
       candidatePhrases,
@@ -2033,29 +2160,55 @@ export async function POST(request) {
           searchTimeoutMs,
           perPhraseLimit: profileSettings.perPhraseLimit,
           includeScoreDetails: developerMode,
-          hybridOverride: searchModeOverride
+          hybridOverride: searchModeOverride,
+          hybridConfig
         })
     );
 
     const timedOutPhrases = mapped.filter((item) => item.strategy === "mongodb-timeout").length;
-    const reviewedResults = mapped.map(buildReviewOutcome);
-    const results = reviewedResults.map((entry, index) => ({
+    // The per-mention trace is returned once, in retrievalTraces below — keep it
+    // off the result entries so the payload doesn't carry every pipeline twice.
+    const reviewedResults = mapped.map(({ trace: _trace, ...entry }) => buildReviewOutcome(entry));
+    const preliminaryResults = reviewedResults.map((entry, index) => ({
       ...entry,
       mentionId: buildMentionId(entry, index)
     }));
+    const semantic = await verifyGroundingSemantics(preliminaryResults,{languageCode,summarize:summarizeCandidate,model:modelOverride,text});
+    const results = semantic.results;
 
-    // Retrieval-only run: also return the MQL pipeline used per mention, so the
-    // UI can show exactly what MongoDB queries the grounding ran.
-    const mqlByMention = Array.isArray(body.groundMentions)
+    // Retrieval-only run: return, per mention, the exact sequence of steps
+    // retrieval ran — every MongoDB pipeline as sent, plus the app-side steps
+    // (tiering, fusion, rerank, merge, grounding scorer) — so the UI can show
+    // and explain how each mention was resolved. Nothing here is rebuilt after
+    // the fact.
+    const retrievalTraces = Array.isArray(body.groundMentions)
       ? results.map((r, i) => {
-        const pe = candidatePhrases[i];
+        const steps = Array.isArray(mapped[i]?.trace) ? [...mapped[i].trace] : [];
+        if (steps.length > 0) {
+          const top = r.topCandidate;
+          steps.push({
+            kind: "app",
+            role: "grounding-scorer",
+            label: "Grounding scorer (in the app)",
+            outcome: top ? "ok" : "skipped",
+            detail: top
+              ? `Re-ranked the candidates for this mention's context (negation, laterality, over-specific terms, semantic tag) and picked “${top.term}” (#${top.conceptId}) — status: ${r.status}.`
+              : `No candidate survived — status: ${r.status}.`,
+            rows: (r.topCandidate ? 1 : 0) + (r.alternatives || []).length
+          });
+          if(r.semanticReview)steps.push({kind:'app',role:'source-entailment',label:'Source evidence verification',outcome:['invalid','unavailable'].includes(r.semanticReview.status)?'error':'ok',detail:r.semanticReview.reason,relation:r.semanticReview.relation||null,evidence:r.semanticReview.evidence||[]});
+        }
         return {
           mentionId: r.mentionId,
-          phrase: pe?.phrase || "",
-          pipeline: buildNavigatorSearchPipeline({ query: pe?.phrase || "", limit: profileSettings.perPhraseLimit, indexName: textIndex, languageCode, releaseId: effectiveReleaseId, areaConceptId, conceptIdScope })
+          phrase: candidatePhrases[i]?.phrase || r.phrase || "",
+          collection: projectionCollection,
+          strategy: r.strategy,
+          status: r.status,
+          steps
         };
       })
       : null;
+
 
     const evidenceGraph = buildEvidenceGraph({
       documentId: requestFingerprint,
@@ -2074,11 +2227,12 @@ export async function POST(request) {
         groundedNodeId: mention?.groundedNodeId || null
       };
     });
-    const principalDiagnosisCandidates = computePrimaryDiagnosisCandidates(resultsWithGraph, {
+    const diagnosisProposal = computeDiagnosisProposal(resultsWithGraph, {
       targetContext,
       limit: 3
     });
-    const principalDiagnosis = principalDiagnosisCandidates[0] || null;
+    const principalDiagnosisCandidates = diagnosisProposal.candidates;
+    const principalDiagnosis = diagnosisProposal.principal;
     const acceptedCount = resultsWithGraph.filter((item) => item.status === "accepted").length;
     const reviewCount = resultsWithGraph.filter((item) => item.status === "review").length;
     const abstainCount = resultsWithGraph.filter((item) => item.status === "abstain").length;
@@ -2093,6 +2247,9 @@ export async function POST(request) {
       extractorUsage,
       extractorPrompt,
       extractorRaw,
+      extractorRequests,
+      extractionPolicy:EXTRACTION_POLICY_VERSION,
+      semanticVerification: {...semantic,results:undefined},
       retrievalProfile,
       releaseId: effectiveReleaseId,
       targetContext: targetContext || null,
@@ -2105,25 +2262,46 @@ export async function POST(request) {
         end: section.end
       })),
       stats: {
+        mentionLimit: maxPhrases,
+        suppliedMentions: Array.isArray(body.groundMentions) ? body.groundMentions.length : extractedMentions?.length || candidatePhrases.length,
+        truncatedMentions: Math.max(0, (Array.isArray(body.groundMentions) ? body.groundMentions.length : extractedMentions?.length || candidatePhrases.length) - candidatePhrases.length),
         candidatePhrases: candidatePhrases.length,
         mappedPhrases: results.filter((entry) => entry.topCandidate).length,
         acceptedCount,
         reviewCount,
         abstainCount,
         timedOutPhrases,
+        semanticVerifiedCount: results.filter(r=>r.semanticReview?.status==='verified').length,
+        semanticLiteralCount: results.filter(r=>r.semanticReview?.status==='literal').length,
+        semanticFailureCount: results.filter(r=>['invalid','unavailable'].includes(r.semanticReview?.status)).length,
         principalDiagnosisCandidates: principalDiagnosisCandidates.length,
         scopeCount: conceptIdScope.length,
         perPhraseLimit: profileSettings.perPhraseLimit,
         searchTimeoutMs,
         latencyMs
       },
+      retrieval: {
+        policyVersion:'source-context-v1',
+        searchMode: usesHybridGrounding ? "hybrid" : "lexical",
+        tuning: usesHybridGrounding ? describeHybridTuning(hybridConfig) : null,
+        strategies: countBy(mapped.map((item) => item.strategy))
+      },
       results: resultsWithGraph,
       evidenceGraph,
       principalDiagnosis,
       principalDiagnosisCandidates,
+      diagnosisPolicyVersion:DIAGNOSIS_POLICY_VERSION,
+      comorbidities: diagnosisProposal.comorbidities,
+      relatedDiagnoses: diagnosisProposal.relatedDiagnoses,
+      presentingSymptoms: diagnosisProposal.symptoms,
+      historicalDiagnoses: diagnosisProposal.history,
+      suspectedDiagnoses: diagnosisProposal.suspected,
+      // How the proposal was built: rules/weights applied, this note's ranking
+      // with per-mention score parts, and the mentions left out (and why).
+      diagnosisExplanation: diagnosisProposal.explanation,
       retrieved: true,
-      mql: mqlByMention,
-      degraded: timedOutPhrases > 0,
+      retrievalTraces,
+      degraded: timedOutPhrases > 0 || Boolean(extractorError) || results.some(r=>['invalid','unavailable'].includes(r.semanticReview?.status)),
       cache: {
         fingerprint: requestFingerprint,
         hit: false
@@ -2208,7 +2386,9 @@ export async function POST(request) {
         abstainCount,
         timedOutPhrases,
         searchTimeoutMs,
-        degraded: timedOutPhrases > 0
+        degraded: payload.degraded,
+        semanticFailures:payload.stats.semanticFailureCount,
+        semanticPolicy:SEMANTIC_POLICY_VERSION
       }
     });
 

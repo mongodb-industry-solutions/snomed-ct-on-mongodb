@@ -961,6 +961,455 @@
           }
         }
       }
+    },
+    "/api/clinical-search": {
+      "post": {
+        "summary": "Search broadly by clinical meaning, with optional concept refinement",
+        "tags": [
+          "Grounding"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "ground",
+                      "search"
+                    ]
+                  },
+                  "plan": {
+                    "type": "object",
+                    "description": "A bounded clinical boolean tree with optional root-level filters: minAge, maxAge, sex, sinceDays, setting."
+                  },
+                  "resolved": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^[0-9]{6,18}$"
+                        },
+                        {
+                          "type": "array",
+                          "minItems": 1,
+                          "maxItems": 40,
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[0-9]{6,18}$"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "includeDescendants": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "languageCode": {
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "es"
+                    ]
+                  },
+                  "planner": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "deterministic",
+                      "language-model"
+                    ],
+                    "default": "auto",
+                    "description": "Auto uses the fast parser for recognized wording and the configured language model for freer requests."
+                  },
+                  "dateMode": {
+                    "type": "string",
+                    "enum": [
+                      "demo",
+                      "today"
+                    ],
+                    "default": "demo",
+                    "description": "Demo uses the frozen synthetic dataset reference for generated notes in the pinned release; other saved notes use today. Today uses the current date for all notes."
+                  }
+                },
+                "required": []
+              },
+              "example": {
+                "query": "Find notes with diabetes and kidney disease",
+                "languageCode": "en",
+                "action": "search"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dateContext": {
+                      "type": "object",
+                      "properties": {
+                        "mode": {
+                          "type": "string",
+                          "enum": [
+                            "demo",
+                            "today"
+                          ]
+                        },
+                        "referenceDate": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "currentDate": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "demoReferenceDate": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "demoReleaseId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or unresolved input"
+          }
+        },
+        "x-demoStatus": "core",
+        "description": "Send action=search with a query to search matching SNOMED families and descendants automatically. Send action=ground to inspect scopes. Refinements use plan and resolved; each condition can match any of several code families. AND/OR grouping, exclusions and coding context are preserved. Supports nested groups, suspected/absent/historical/planned assertions, family subjects, and root-level minAge/maxAge/sex/sinceDays/setting filters. Recency uses encounter.occurredAt. Results include corpus counts and synthetic labels. Relative dates default to the stored synthetic dataset reference; other notes use today. dateMode=today applies current-date windows to all notes. dateContext reports the effective mode and dates."
+      },
+      "get": {
+        "summary": "Count searchable and synthetic clinical notes",
+        "tags": [
+          "Grounding"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "demo-hospital",
+              "enum": [
+                "demo-hospital"
+              ]
+            },
+            "description": "The fixed tenant supported by this standalone demo."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Searchable and synthetic corpus counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "corpus": {
+                      "type": "object",
+                      "properties": {
+                        "totalNotes": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "syntheticNotes": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "english": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "spanish": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "demoReferenceDate": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "demoReleaseId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      }
+                    },
+                    "dateContext": {
+                      "type": "object",
+                      "properties": {
+                        "mode": {
+                          "type": "string",
+                          "enum": [
+                            "demo",
+                            "today"
+                          ]
+                        },
+                        "referenceDate": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "currentDate": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "demoReferenceDate": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "demoReleaseId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-demoStatus": "core"
+      }
+    },
+    "/api/graph-neighborhood": {
+      "post": {
+        "summary": "Expand bounded SNOMED ancestors with $graphLookup",
+        "tags": [
+          "Terminology"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "conceptId": {
+                    "type": "string"
+                  },
+                  "levels": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "languageCode": {
+                    "type": "string"
+                  },
+                  "releaseId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "conceptId"
+                ]
+              },
+              "example": {
+                "conceptId": "44054006",
+                "levels": 2,
+                "languageCode": "en"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or unresolved input"
+          }
+        },
+        "x-demoStatus": "core"
+      }
+    },
+    "/api/translate": {
+      "post": {
+        "summary": "Read embedded mapping targets, rules and reverse candidates",
+        "tags": [
+          "Terminology"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "system": {
+                    "type": "string"
+                  },
+                  "targetSystem": {
+                    "type": "string"
+                  },
+                  "targetVersion": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "targetSystem"
+                ]
+              },
+              "example": {
+                "code": "44054006",
+                "system": "http://snomed.info/sct",
+                "targetSystem": "http://hl7.org/fhir/sid/icd-10"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or unresolved input"
+          }
+        },
+        "x-demoStatus": "core"
+      }
+    },
+    "/api/fhir/ConceptMap/$translate": {
+      "post": {
+        "summary": "FHIR R4 $translate subset over imported concept mappings",
+        "tags": [
+          "Terminology"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/fhir+json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              },
+              "example": {
+                "resourceType": "Parameters",
+                "parameter": [
+                  {
+                    "name": "code",
+                    "valueCode": "44054006"
+                  },
+                  {
+                    "name": "system",
+                    "valueUri": "http://snomed.info/sct"
+                  },
+                  {
+                    "name": "targetsystem",
+                    "valueUri": "http://hl7.org/fhir/sid/icd-10"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/fhir+json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or unresolved input"
+          }
+        },
+        "description": "Returns published candidates and custom extensions for groups, priorities, rules and advice. Rules are not evaluated; reverse lookup does not establish equivalence.",
+        "x-demoStatus": "core"
+      }
+    },
+    "/api/llm-config": {
+      "get": {
+        "summary": "Runtime model configuration for both browser pickers",
+        "description": "Returns only the default and selectable gateway model IDs and enabled flag. Never exposes gateway credentials. Uses server environment settings, including in prebuilt containers.",
+        "responses": {
+          "200": {
+            "description": "Public model configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "defaultModel": {
+                      "type": "string",
+                      "example": "gpt-5.4-mini"
+                    },
+                    "availableModels": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

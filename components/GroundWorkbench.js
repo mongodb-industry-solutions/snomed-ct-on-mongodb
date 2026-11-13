@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { DEFAULT_LLM_MODEL } from "@/lib/llm-models";
+import { canonicalSemanticTag, clinicalCodeRole, isPrincipalMention } from "@/lib/clinical-code-type";
+import { mappingCanSupportDiagnosis } from "@/lib/grounding-policy";
+import { codingToFhirResource } from "@/lib/clinical-output";
+import { mergeClinicalCodings, discussionOnly } from "@/lib/clinical-fields";
 import dynamic from "next/dynamic";
 import Badge from "@leafygreen-ui/badge";
 const Code = dynamic(() => import("@leafygreen-ui/code"), { ssr: false });
 import EvidenceFlow from "@/components/EvidenceFlow";
 import PromptPanel from "@/components/PromptPanel";
+import { FusionBreakdown, FusionSummary, HybridTuningPanel, tuningOverrides } from "@/components/HybridTuning";
 import { EXAMPLE_GROUPS } from "@/lib/example-notes";
+import { DiagnosisExplainer, RetrievalInspector } from "@/components/SearchInspector";
 
 // Map our semantic states to LeafyGreen Badge variants.
 function statusVariant(status) {
@@ -32,11 +39,6 @@ const INK = "#001E2B";
 const GREEN = "#00684A";
 const BORDER = "#e3e7ea";
 
-// Selectable extraction models (set NEXT_PUBLIC_LLM_GROUNDING_MODELS to a
-// comma-separated list the gateway serves). Defaults to a single model.
-const LLM_MODELS = (process.env.NEXT_PUBLIC_LLM_GROUNDING_MODELS || "gpt-5.5")
-  .split(",").map((s) => s.trim()).filter(Boolean);
-
 const CUE_COLORS = {
   negation: "#DB3030",
   "family-history": "#8F4FBF",
@@ -56,18 +58,22 @@ function statusColor(status) {
   return "#B8860B"; // review
 }
 
-export default function GroundWorkbench({ defaultLanguageCode = "en", sessionModel, onSessionModelChange }) {
+export default function GroundWorkbench({ defaultLanguageCode = "en", sessionModel, onSessionModelChange, hybridTuning = null }) {
   const [text, setText] = useState("");
   const [languageCode, setLanguageCode] = useState(defaultLanguageCode || "en");
   const [state, setState] = useState({ loading: false, error: "" });
   const [response, setResponse] = useState(null);
   const [step, setStep] = useState("extraction");
   const [groundingView, setGroundingView] = useState("graph");
+  const [selectedGroundingId, setSelectedGroundingId] = useState("");
   // Retrieval (Stage 2) runs separately from extraction (Stage 1).
   const [retrieval, setRetrieval] = useState({ running: false, error: "" });
+  // Hybrid grounding shares the session's lexical/vector fusion tuning.
+  const [retrievalMode, setRetrievalMode] = useState("hybrid");
+  const [tuningOpen, setTuningOpen] = useState(false);
   // The extraction model is the session model (chosen in the header). Fall back
   // to local state only if this component is used without a session model.
-  const [localModel, setLocalModel] = useState(LLM_MODELS[0]);
+  const [localModel, setLocalModel] = useState(DEFAULT_LLM_MODEL);
   const groundingModel = sessionModel || localModel;
   const setGroundingModel = onSessionModelChange || setLocalModel;
   const [llm, setLlm] = useState({ loading: false, error: "", byMention: {}, model: "", summary: "", primaryConceptId: "none" });
@@ -105,9 +111,10 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
         sentence: r.sentence || "",
         assertion: r.assertion,
         subject: r.experiencer || "patient",
+        section: r.llmSection || r.section || "other",
         status: r.status,
         candidates: [r.topCandidate, ...(r.alternatives || [])].filter(Boolean).map((c) => ({
-          conceptId: c.conceptId, term: c.term, semanticTag: c.semanticTag
+          conceptId: c.conceptId, term: c.term, semanticTag: c.semanticTag, ancestorIds: c.ancestorIds, active: c.active
         }))
       }));
     const empty = { loading: false, error: "", byMention: {}, model: "", summary: "", primaryConceptId: "none" };
@@ -121,7 +128,12 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
       const res = await fetch("/api/llm-ground", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ mentions, languageCode })
+        body: JSON.stringify({
+          mentions,
+          languageCode,
+          model: groundingModel,
+          rankingHint: (resp?.principalDiagnosisCandidates || []).map((c) => ({ conceptId: c.conceptId, term: c.term }))
+        })
       });
       const data = await res.json();
       if (!res.ok || data?.ok === false) throw new Error(data?.error || `HTTP ${res.status}`);
@@ -158,8 +170,9 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
   };
 
   // Stage 2 — retrieve SNOMED candidates from MongoDB for the extracted mentions.
-  const runRetrieval = async () => {
+  const runRetrieval = async (mode = retrievalMode) => {
     if (!response || retrieval.running) return;
+    const overrides = mode === "hybrid" ? tuningOverrides(hybridTuning?.tuning, hybridTuning?.defaults) : null;
     const mentions = Array.isArray(response.mentions) ? response.mentions : [];
     const body = response._text || "";
     if (!mentions.length) { setRetrieval({ running: false, error: "No mentions to retrieve." }); return; }
@@ -168,11 +181,11 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
       const res = await fetch("/api/nlp-map", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: body, languageCode, groundMentions: mentions, searchTimeoutMs: 12000 })
+        body: JSON.stringify({ text: body, languageCode, groundMentions: mentions, searchTimeoutMs: 12000, searchMode: mode, ...(overrides ? { tuning: overrides } : {}) })
       });
       const data = await res.json();
       if (!res.ok || data?.ok === false) throw new Error(data?.error || `HTTP ${res.status}`);
-      setResponse((prev) => ({ ...prev, ...data, _text: body, retrieved: true }));
+      setResponse((prev) => ({ ...prev, ...data, extractor:prev.extractor,extractorModel:prev.extractorModel,extractorError:prev.extractorError,extractorUsage:prev.extractorUsage,extractorPrompt:prev.extractorPrompt,extractorRaw:prev.extractorRaw, _text: body, retrieved: true }));
       setRetrieval({ running: false, error: "" });
       setStep("grounding");
     } catch (error) {
@@ -256,7 +269,7 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
         <button type="button" style={crumbLink} onClick={() => { setResponse(null); setState({ loading: false, error: "" }); }}>Notes</button>
         <span style={{ color: "#889397" }}>›</span>
         <span style={{ color: INK, fontWeight: 700 }}>Grounded note</span>
-        {response.degraded ? <span style={{ marginLeft: 8 }}><Badge variant="yellow">partial (search slow)</Badge></span> : null}
+        {response.degraded ? <span style={{ marginLeft: 8 }}><Badge variant="yellow">partial · needs review</Badge></span> : null}
         {llm.model ? <span style={{ marginLeft: 8 }}><Badge variant="blue">LLM assist · {llm.model}</Badge></span> : null}
         <button type="button" style={{ ...llmBtn, marginLeft: "auto" }}
           onClick={() => runLlmAssist(response)} disabled={llm.loading}
@@ -270,6 +283,9 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
           <strong>LLM assist unavailable.</strong> {llm.error}
         </div>
       ) : null}
+      {response.extractorError ? <p style={errBox}><strong>Extraction used the deterministic fallback.</strong> {response.extractorError}</p> : null}
+      {response.stats?.semanticFailureCount ? <p style={errBox}><strong>Source verification is incomplete.</strong> {response.stats.semanticFailureCount} mappings need review before inclusion.</p> : null}
+      {response.stats?.truncatedMentions > 0 ? <p style={errBox}>{response.stats.truncatedMentions} mentions exceeded the configured limit. This result is incomplete.</p> : null}
       {!llm.model && !llm.error && !llm.loading ? (
         <p style={{ ...sub, marginBottom: 12 }}>
           ✦ Optional: use <strong>LLM assist</strong> (candidate-constrained) to disambiguate the mentions the search tier left as “review”.
@@ -294,13 +310,38 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
           <span style={{ ...sub, margin: 0 }}>
             <strong style={{ color: INK }}>Stage 1 done</strong> — {(response.mentions || []).length} mention{(response.mentions || []).length === 1 ? "" : "s"} extracted by the LLM. Stage 2 retrieves the SNOMED candidates from MongoDB Search / Vector Search.
           </span>
-          <button type="button" style={{ ...primaryBtn, marginLeft: "auto", padding: "8px 18px" }} disabled={retrieval.running} onClick={runRetrieval}>
+          <RetrievalModeToggle mode={retrievalMode} setMode={setRetrievalMode} disabled={retrieval.running} />
+          <button type="button" style={{ ...primaryBtn, padding: "8px 18px" }} disabled={retrieval.running} onClick={() => runRetrieval()}>
             {retrieval.running ? "Retrieving from MongoDB…" : "Retrieve SNOMED candidates"}
           </button>
-          {retrieval.running ? <span style={{ width: "100%", ...sub, marginTop: 4 }}>Running MongoDB Search / Vector Search queries for {(response.mentions || []).length} mentions…</span> : null}
+          {retrievalMode === "hybrid" && hybridTuning?.tuning ? (
+            <div style={{ width: "100%" }}>
+              <HybridTuningPanel
+                open={tuningOpen}
+                setOpen={setTuningOpen}
+                tuning={hybridTuning.tuning}
+                setTuning={hybridTuning.setTuning}
+                defaults={hybridTuning.defaults}
+                scopeNote="Session-wide: shared with Navigation. Grounding runs one hybrid search per mention, so it uses a smaller candidate/rerank pool unless you change those values here."
+              />
+            </div>
+          ) : null}
+          {retrieval.running ? <span style={{ width: "100%", ...sub, marginTop: 4 }}>Retrieving candidates and checking source evidence for {(response.mentions || []).length} mentions…</span> : null}
           {retrieval.error ? <span style={{ color: "#DB3030", fontSize: 12, width: "100%" }}>{retrieval.error}</span> : null}
         </div>
-      ) : null}
+      ) : (
+        <RetrievalSummary
+          retrieval={response.retrieval}
+          running={retrieval.running}
+          error={retrieval.error}
+          mode={retrievalMode}
+          setMode={setRetrievalMode}
+          onRerun={(m) => runRetrieval(m)}
+          hybridTuning={hybridTuning}
+          tuningOpen={tuningOpen}
+          setTuningOpen={setTuningOpen}
+        />
+      )}
 
       {step === "extraction" ? (
         <>
@@ -325,9 +366,10 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
           {groundingView === "grouped" ? (
             <GroupedGrounding results={results} />
           ) : graph ? (
-            <EvidenceFlow graph={graph} reviewRows={[]} selectedSpanId="" onSelectSpan={() => {}} />
+            <EvidenceFlow graph={graph} reviewRows={results.map(r => ({ ...r, id: r.mentionId, selectedCandidate: r.topCandidate }))} selectedSpanId={selectedGroundingId} onSelectSpan={setSelectedGroundingId} />
           ) : <p style={sub}>No evidence graph.</p>}
-          <MqlPanel mql={response.mql} />
+          <RetrievalInspector traces={response.retrievalTraces} />
+          {selectedGroundingId ? <MentionGroundingInspector result={results.find(r => r.mentionId === selectedGroundingId)} releaseId={response.releaseId} /> : null}
         </>
         )
       ) : null}
@@ -337,7 +379,10 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
         ) : (
         <>
           <SampleScopeNotice />
-          <ConceptsView results={results} principal={principal} llm={llm} onSave={runSave} saveState={save} languageCode={languageCode} />
+          {/* Remount when the LLM review lands so its concept and principal picks seed the worklist. */}
+          <ConceptsView key={llm.model ? `llm-${llm.model}-${llm.primaryConceptId}` : "rules"} results={results} principal={principal}
+            proposal={response} llm={llm} onSave={runSave} saveState={save} languageCode={languageCode} />
+          <DiagnosisExplainer explanation={response.diagnosisExplanation} llm={llm} principal={principal} />
           <GoldRecordPanel results={results} noteText={noteText} languageCode={languageCode} />
         </>
         )
@@ -350,12 +395,80 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
 }
 
 // ---- Step 1: deterministic extraction highlighting ----
+function RetrievalModeToggle({ mode, setMode, disabled }) {
+  return (
+    <div style={{ marginLeft: "auto", display: "inline-flex", border: `1px solid ${BORDER}`, borderRadius: 8, overflow: "hidden" }}
+      title="Hybrid: MongoDB Search + Vector Search fused with the session tuning, optional Voyage rerank (default). Lexical: MongoDB Search only for comparison.">
+      {[{ key: "lexical", label: "Lexical" }, { key: "hybrid", label: "Hybrid" }].map((m) => (
+        <button key={m.key} type="button" disabled={disabled} onClick={() => setMode(m.key)}
+          style={{ padding: "6px 12px", fontSize: 12, border: "none", cursor: disabled ? "default" : "pointer",
+            background: m.key === mode ? GREEN : "#fff", color: m.key === mode ? "#fff" : INK, fontWeight: m.key === mode ? 700 : 500 }}>
+          {m.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// After Stage 2: what retrieval actually ran (mode, fusion settings, how many
+// mentions each strategy resolved), with a one-click re-run in either mode.
+function RetrievalSummary({ retrieval, running, error, mode, setMode, onRerun, hybridTuning, tuningOpen, setTuningOpen }) {
+  if (!retrieval) return null;
+  const t = retrieval.tuning;
+  const strategies = Object.entries(retrieval.strategies || {})
+    .map(([k, v]) => `${k} ${v}`)
+    .join(" · ");
+  const algorithm = t ? {
+    engine: t.fusionMode === "appRrf" ? "app-rrf" : `mongodb-${t.fusionMode}`,
+    method: t.fusionMode === "scoreFusion" ? "score fusion" : "weighted reciprocal rank fusion",
+    formula: t.fusionMode === "scoreFusion" ? "score = Σ weight × sigmoid(engine score)" : `score = Σ weight / (${t.fusionMode === "rankFusion" ? 60 : t.rrfK} + rank)`,
+    weights: { lexical: t.lexicalWeight, semantic: t.semanticWeight },
+    candidatePool: t.candidatePool,
+    rerank: { requested: t.rerank, applied: t.rerank, pool: t.rerankPool }
+  } : null;
+  return (
+    <div style={{ border: `1px solid ${BORDER}`, borderRadius: 10, background: "#fff", padding: "10px 12px", marginBottom: 14, display: "grid", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <strong style={{ color: INK, fontSize: 13 }}>Retrieval</strong>
+        <Badge variant={retrieval.searchMode === "hybrid" ? "blue" : "lightgray"}>{retrieval.searchMode}</Badge>
+        {strategies ? <span style={{ fontSize: 11.5, color: "#5C6C75" }}>per mention: {strategies}</span> : null}
+        <RetrievalModeToggle mode={mode} setMode={setMode} disabled={running} />
+        <button type="button" style={{ ...primaryBtn, padding: "6px 14px", fontSize: 12 }} disabled={running} onClick={() => onRerun(mode)}>
+          {running ? "Retrieving…" : `Re-run retrieval (${mode})`}
+        </button>
+      </div>
+      {algorithm ? (
+        <div style={{ fontSize: 11 }}>
+          <FusionSummary algorithm={algorithm} />
+          <div style={{ fontSize: 11, color: "#889397", marginTop: -6 }}>
+            Requested settings. Per mention, exact lexical hits are merged ahead of the fused candidates, and the grounding scorer then applies its negation / laterality / specificity checks — expand a mention's candidates to see each one's fusion breakdown.
+          </div>
+        </div>
+      ) : null}
+      {mode === "hybrid" && hybridTuning?.tuning ? (
+        <HybridTuningPanel
+          open={tuningOpen}
+          setOpen={setTuningOpen}
+          tuning={hybridTuning.tuning}
+          setTuning={hybridTuning.setTuning}
+          defaults={hybridTuning.defaults}
+          canRerun={!running}
+          onRerun={() => onRerun("hybrid")}
+          rerunLabel="Re-run retrieval"
+          scopeNote="Session-wide: shared with Navigation. Grounding runs one hybrid search per mention, so it uses a smaller candidate/rerank pool unless you change those values here."
+        />
+      ) : null}
+      {error ? <span style={{ color: "#DB3030", fontSize: 12 }}>{error}</span> : null}
+    </div>
+  );
+}
+
 function ExtractionView({ noteText, results, graph }) {
   const highlights = useMemo(() => {
     const hs = [];
     for (const r of results) {
       const s = Number(r?.span?.start), e = Number(r?.span?.end);
-      if (Number.isFinite(s) && Number.isFinite(e)) hs.push({ start: s, end: e, kind: "term", assertion: r.assertion, status: r.status });
+      if (r?.span?.start != null && r?.span?.end != null && Number.isFinite(s) && Number.isFinite(e)) hs.push({ start: s, end: e, kind: "term", assertion: r.assertion, status: r.status });
     }
     for (const cue of graph?.cueObjects || []) {
       if (cue?.cueType === "relation") continue; // skip linguistic connectors ("with"/"con")
@@ -426,10 +539,10 @@ function ExtractionView({ noteText, results, graph }) {
         })}
       </div>
       <p style={{ ...sub, marginTop: 10 }}>
-        Highlights mark each extracted clinical mention and its context (negation, history, family, plan). A concept
-        stated more than once is extracted once and its later mentions are shown as <em>repeated</em>. Un-highlighted
-        text is non-clinical or out of scope for the sample dataset.
+        Highlights show extracted occurrences and their context. Repeated evidence keeps its own subject, time and certainty.
+        Un-highlighted text may include missed mentions or qualifiers and should be reviewed.
       </p>
+      <details><summary style={{ ...sub, cursor: "pointer" }}>Clinical context graph</summary><EvidenceFlow graph={graph} reviewRows={[]} selectedSpanId="" showGrounding={false} /></details>
     </div>
   );
 }
@@ -441,8 +554,8 @@ function SampleScopeNotice() {
       <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5, color: "#5C4F26" }}>
         <strong>Sample dataset.</strong> This demo runs on a small, scoped subset of SNOMED CT — not the full release.
         Some mentions may map to an approximate concept or to none (common procedures, medications, and symptoms are
-        sparsely represented here). A full licensed SNOMED CT release would ground every concept precisely; the
-        pipeline is unchanged.
+        sparsely represented here). Missing or uncertain matches require review. Broader coverage improves candidate
+        recall; each mapping still needs source validation.
       </p>
     </div>
   );
@@ -485,30 +598,52 @@ function PipelineRail({ extractor, extractorModel }) {
 }
 
 // ---- Grouped grounding: the same mentions arranged by clinical category ----
+function MentionGroundingInspector({ result, releaseId }) {
+  if (!result) return null;
+  return <div style={{ border: `1px solid ${BORDER}`, borderRadius: 10, padding: 12, marginTop: 12 }}>
+    <strong>{result.verbatim || result.phrase}</strong>
+    <p style={sub}>{result.assertion} · {result.experiencer} · {result.status} · release {releaseId} · {result.strategy}</p>
+    <p style={sub}>Search phrase: {result.phrase}. Mapping acceptance preserves the source's clinical certainty.</p>
+    {[result.topCandidate, ...(result.alternatives || [])].filter(Boolean).map(c => <div key={c.conceptId} style={{ padding: "5px 0", fontSize: 12 }}><strong>SNOMED CT #{c.conceptId}</strong> · {c.term} · {c.semanticTag}<br />Matched description: {c.matchedText || c.term} · {c.matchReason}</div>)}
+    <p style={sub}>{(result.decisionReasons || []).join("; ")}</p>
+  </div>;
+}
+
 function GroupedGrounding({ results }) {
-  const groups = { diagnoses: [], procedures: [], medications: [], history: [], family: [], negated: [] };
+  const groups = { diagnoses: [], findings: [], procedures: [], medications: [], other: [], history: [], family: [], negated: [], suspected: [], planned: [], review: [], unresolved: [] };
   const seen = new Set();
   for (const r of Array.isArray(results) ? results : []) {
     const tc = r.topCandidate;
-    if (!tc) continue;
-    const tag = String(tc.semanticTag || "").toLowerCase();
+    if (!tc) { groups.unresolved.push({ term: r.verbatim || r.phrase, phrase: r.phrase, status: r.status }); continue; }
+    const role = clinicalCodeRole(tc);
     let b;
-    if (r.assertion === "absent") b = "negated";
+    if (!mappingCanSupportDiagnosis(r)) b = "review";
+    else if (r.assertion === "absent") b = "negated";
     else if ((r.experiencer || "patient") === "family" || r.assertion === "family-history") b = "family";
-    else if (PROCEDURE_TAGS.includes(tag)) b = "procedures";
-    else if (PRODUCT_TAGS.includes(tag)) b = "medications";
-    else if (r.assertion === "historical" || r.llmSection === "history") b = "history";
+    else if (r.assertion === "suspected") b = "suspected";
+    else if (r.assertion === "planned" || r.workflow === "conditional") b = "planned";
+    else if (r.assertion === "historical" || r.temporality === "unknown") b = "history";
+    else if (["symptom", "observation"].includes(r.kind) || canonicalSemanticTag(tc.semanticTag) === "finding") b = "findings";
+    else if (role === "procedure") b = "procedures";
+    else if (role === "medication") b = "medications";
+    else if (role === "other") b = "other";
     else b = "diagnoses";
-    const key = `${b}:${tc.conceptId}`;
+    const key = `${b}:${tc.conceptId}:${r.temporality || ""}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    groups[b].push({ term: tc.term, conceptId: tc.conceptId, phrase: r.span?.text || r.phrase });
+    groups[b].push({ term: tc.term, conceptId: tc.conceptId, phrase: r.span?.text || r.phrase, status: r.status });
   }
   const cols = [
     { key: "diagnoses", label: "Diagnoses", color: GREEN },
+    { key: "findings", label: "Symptoms / observations", color: GREEN },
+    { key: "suspected", label: "Provisional", color: "#944F01" },
+    { key: "planned", label: "Planned / conditional", color: "#016BF8" },
+    { key: "review", label: "Mapping needs review", color: "#944F01" },
+    { key: "unresolved", label: "Unresolved", color: "#5C6C75" },
     { key: "procedures", label: "Procedures", color: "#016BF8" },
     { key: "medications", label: "Medications", color: "#00857B" },
-    { key: "history", label: "History", color: CUE_COLORS.history },
+    { key: "other", label: "Other concept types", color: "#5C6C75" },
+    { key: "history", label: "History / activity unspecified", color: CUE_COLORS.history },
     { key: "family", label: "Family history", color: CUE_COLORS["family-history"] },
     { key: "negated", label: "Negated / ruled out", color: CUE_COLORS.negation }
   ].filter((c) => groups[c.key].length > 0);
@@ -525,7 +660,7 @@ function GroupedGrounding({ results }) {
             {groups[c.key].map((m, i) => (
               <div key={i}>
                 <div style={{ fontSize: 12.5, fontWeight: 600, color: INK }}>{m.term}</div>
-                <div style={{ fontSize: 11, color: "#889397" }}>#{m.conceptId} · “{m.phrase}”</div>
+                <div style={{ fontSize: 11, color: "#889397" }}>{m.conceptId ? `SNOMED CT #${m.conceptId}` : "No supported mapping"} · “{m.phrase}” · {m.status}</div>
               </div>
             ))}
           </div>
@@ -538,7 +673,7 @@ function GroupedGrounding({ results }) {
 // ---- Coder worklist: codings grouped by clinical ROLE, with one principal ----
 function WorklistRow({ m, chosen, chooseConcept, isPrincipal, leading, trailing }) {
   const [open, setOpen] = useState(false);
-  const c = m.candidates.find((x) => String(x.conceptId) === String(chosen)) || m.candidates[0];
+  const c = m.candidates.find((x) => String(x.conceptId) === String(chosen)) || m.candidates?.[0];
   const hasAlts = m.candidates.length > 1;
   if (!c) return null;
   return (
@@ -556,7 +691,8 @@ function WorklistRow({ m, chosen, chooseConcept, isPrincipal, leading, trailing 
             {c.semanticTag ? `${c.semanticTag} · ` : ""}#{c.conceptId}
             {m.phrase ? <span style={{ color: "#889397" }}> · from “{m.phrase}”</span> : null}
             {c.matchedBy ? <span style={{ color: "#889397" }}> · {c.matchedBy}</span> : null}
-            {m.confidencePct > 0 ? <span style={{ color: "#889397" }}> · {m.confidencePct}% conf.</span> : null}
+            {m.confidencePct > 0 ? <span style={{ color: "#889397" }}> · match score {m.confidencePct}/100</span> : null}
+            {!mappingCanSupportDiagnosis(m) ? <span> · proposed mapping</span> : null}
           </div>
           {m.rationale ? <div style={{ fontSize: 11, color: "#889397", marginTop: 3, fontStyle: "italic" }}>{m.rationale}</div> : null}
           {hasAlts ? (
@@ -579,7 +715,9 @@ function WorklistRow({ m, chosen, chooseConcept, isPrincipal, leading, trailing 
                       {cand.matchReason ? ` · ${cand.matchReason}` : ""}
                       {cand.matchedBy ? ` · ${cand.matchedBy}` : ""}
                       {Number.isFinite(cand.score) && cand.score ? ` · score ${Math.round(cand.score)}` : ""}
+                      {typeof cand.rerankScore === "number" ? ` · rerank ${cand.rerankScore.toFixed(2)}` : ""}
                     </div>
+                    <FusionBreakdown row={cand} />
                   </button>
                 );
               })}
@@ -592,15 +730,45 @@ function WorklistRow({ m, chosen, chooseConcept, isPrincipal, leading, trailing 
   );
 }
 
-function ReviewWorklist({ mentions, roleOf, chosen, chooseConcept, accepted, toggle, principalKey, setPrincipal, excludeReason, addConcept, languageCode }) {
+function ReviewWorklist({ mentions, rank = () => 0, pickDisagreement = null, roleOf, chosen, chooseConcept, accepted, toggle, principalKey, setPrincipal, excludeReason, addConcept, languageCode }) {
   const byRole = (role) => mentions.filter((m) => roleOf(m) === role);
   const diagnoses = byRole("diagnosis");
-  const procedures = byRole("procedure");
+  const procedures = mentions.filter(m=>['procedure','test','referral'].includes(roleOf(m)));
+  const observations = byRole('observation');
   const medications = byRole("medication");
+  const otherConcepts = byRole("other");
   const family = byRole("family-history");
-  const context = mentions.filter((m) => ["ruled-out", "planned"].includes(roleOf(m)));
-  const principal = diagnoses.find((m) => m.key === principalKey) || null;
-  const secondary = diagnoses.filter((m) => m.key !== principalKey);
+  const context = mentions.filter((m) => ["ruled-out", "planned", "discussion"].includes(roleOf(m)));
+  const mappingReview = byRole("review");
+  const principal = diagnoses.find((m) => m.key === principalKey && m.assertion === "present") || null;
+
+  // Deduplicate only identical clinical facts. A hierarchy relation does not
+  // make different assertions or times interchangeable.
+  const conceptOf = (m) => m.candidates.find((c) => String(c.conceptId) === String(chosen[m.key])) || m.candidates[0] || {};
+  const factKey = m => [conceptOf(m).conceptId, m.assertion, m.experiencer, m.temporality, m.workflow].join("|");
+  const seenIds = new Set(principal ? [factKey(principal)] : []);
+  const secondary = diagnoses
+    .filter((m) => m.key !== principalKey)
+    .sort((a, b) => rank(a) - rank(b))
+    .filter((m) => {
+      const id = factKey(m);
+      if (seenIds.has(id)) return false;
+      seenIds.add(id);
+      const covered = diagnoses.some(other => other.key !== m.key
+        && (other.key === principalKey || accepted[other.key])
+        && other.assertion === m.assertion && other.experiencer === m.experiencer
+        && other.temporality === m.temporality && other.kind === m.kind
+        && String(conceptOf(other).conceptId) !== String(conceptOf(m).conceptId)
+        && (conceptOf(other).ancestorIds || []).map(String).includes(String(conceptOf(m).conceptId)));
+      if (covered) return false;
+      return true;
+    });
+  // A finding is usually a symptom the principal explains — shown, not coded by default.
+  const isFinding = (m) => m.kind==='symptom'||canonicalSemanticTag(conceptOf(m).semanticTag) === "finding";
+  const activeSecondary = secondary.filter((m) => m.assertion === "present" && m.temporality !== "unknown" && !isFinding(m));
+  const symptomSecondary = secondary.filter((m) => m.assertion === "present" && isFinding(m));
+  const pastSecondary = secondary.filter((m) => m.assertion === "historical" || (m.assertion==='present'&&m.temporality === "unknown"));
+  const suspectedSecondary = secondary.filter((m) => m.assertion === "suspected");
 
   const checkbox = (key, on) => (
     <button type="button" onClick={() => toggle(key)} aria-pressed={on} title={on ? "Included — click to exclude" : "Click to include"}
@@ -636,6 +804,16 @@ function ReviewWorklist({ mentions, roleOf, chosen, chooseConcept, accepted, tog
       </p>
 
       {sectionHead("Principal diagnosis", null, GREEN, "the main reason for the encounter")}
+      {mappingReview.length ? <>
+        {sectionHead("Mappings needing review", mappingReview.length, "#944F01", "proposals excluded from confirmed diagnoses until reviewed")}
+        {box(mappingReview.map(m => row(m, checkbox(m.key, !!accepted[m.key]))))}
+      </> : null}
+      {pickDisagreement ? (
+        <p style={{ ...sub, margin: "0 0 6px", color: "#944F01" }}>
+          The scoring rules proposed <strong>{pickDisagreement.rule}</strong>; the LLM review proposed <strong>{pickDisagreement.llm}</strong>.
+          The LLM pick is shown — confirm which one is right.
+        </p>
+      ) : null}
       {box(
         principal
           ? row(principal, checkbox(principal.key, accepted[principal.key] !== false))
@@ -643,10 +821,31 @@ function ReviewWorklist({ mentions, roleOf, chosen, chooseConcept, accepted, tog
         "#F6FFF9"
       )}
 
-      {secondary.length > 0 ? (
+      {activeSecondary.length > 0 ? (
         <>
-          {sectionHead("Other diagnoses (comorbidities)", secondary.length, INK)}
-          {box(secondary.map((m) => row(m, checkbox(m.key, !!accepted[m.key]), makePrincipalBtn(m.key))))}
+          {sectionHead("Other diagnoses (comorbidities)", activeSecondary.length, INK, "active problems documented alongside the principal")}
+          {box(activeSecondary.map((m) => row(m, checkbox(m.key, !!accepted[m.key]), makePrincipalBtn(m.key))))}
+        </>
+      ) : null}
+
+      {symptomSecondary.length > 0 ? (
+        <>
+          {sectionHead("Presenting symptoms", symptomSecondary.length, "#5C6C75", "usually explained by a diagnosis — code only if unexplained")}
+          {box(symptomSecondary.map((m) => row(m, checkbox(m.key, !!accepted[m.key]), makePrincipalBtn(m.key))))}
+        </>
+      ) : null}
+
+      {pastSecondary.length > 0 ? (
+        <>
+          {sectionHead("History / activity unspecified", pastSecondary.length, "#5C6C75", "prior events or conditions whose current activity needs review")}
+          {box(pastSecondary.map((m) => row(m, checkbox(m.key, !!accepted[m.key]))))}
+        </>
+      ) : null}
+
+      {suspectedSecondary.length > 0 ? (
+        <>
+          {sectionHead("Suspected", suspectedSecondary.length, "#944F01", "provisional — accepting a mapping does not confirm the diagnosis")}
+          {box(suspectedSecondary.map((m) => row(m, checkbox(m.key, !!accepted[m.key]))))}
         </>
       ) : null}
 
@@ -664,6 +863,14 @@ function ReviewWorklist({ mentions, roleOf, chosen, chooseConcept, accepted, tog
         </>
       ) : null}
 
+      {otherConcepts.length > 0 ? (
+        <>
+          {sectionHead("Other concept types", otherConcepts.length, "#5C6C75", "not eligible as diagnoses")}
+          {box(otherConcepts.map((m) => row(m, <Badge variant="lightgray">Not a clinical finding</Badge>)))}
+        </>
+      ) : null}
+      {observations.length > 0 ? <>{sectionHead('Observations',observations.length,'#5C6C75','measurements and results')}{box(observations.map(m=>row(m,checkbox(m.key,!!accepted[m.key]))))}</> : null}
+
       {family.length > 0 ? (
         <>
           {sectionHead("Family history", family.length, CUE_COLORS["family-history"], "context — coded as family history if included")}
@@ -673,9 +880,9 @@ function ReviewWorklist({ mentions, roleOf, chosen, chooseConcept, accepted, tog
 
       {context.length > 0 ? (
         <>
-          {sectionHead("Ruled out / planned", context.length, "#889397", "context — not coded")}
+          {sectionHead("Ruled out / planned / discussion", context.length, "#889397", "include evidence or proposals only when reviewed")}
           {box(context.map((m) => row(m,
-            <span style={{ flexShrink: 0, marginTop: 2 }}><Badge variant="lightgray">{excludeReason[roleOf(m)] || "context"}</Badge></span>
+            roleOf(m)==='discussion'?<Badge variant='lightgray'>Discussion only</Badge>:checkbox(m.key,!!accepted[m.key])
           )), "#FAFBFB")}
         </>
       ) : null}
@@ -755,28 +962,6 @@ function AddConceptSearch({ onAdd, languageCode = "en" }) {
 }
 
 // ---- Step 3: grounded concepts ----
-// The exact MongoDB aggregation pipelines retrieval ran, per mention — so the
-// query layer is transparent, not a black box behind "grounding".
-function MqlPanel({ mql }) {
-  const [open, setOpen] = useState(false);
-  const items = Array.isArray(mql) ? mql : [];
-  if (!items.length) return null;
-  return (
-    <details open={open} onToggle={(e) => setOpen(e.target.open)} style={{ marginTop: 14, border: `1px solid ${BORDER}`, borderRadius: 10, background: "#fbfdfc", padding: "10px 14px" }}>
-      <summary style={{ cursor: "pointer", fontWeight: 700, color: INK, fontSize: 13 }}>
-        MongoDB queries (MQL) — {items.length} pipeline{items.length === 1 ? "" : "s"} run by retrieval
-      </summary>
-      <p style={{ ...sub, margin: "8px 0" }}>The aggregation pipeline MongoDB ran to ground each mention (MongoDB Search over the term sidecar).</p>
-      {items.map((q, i) => (
-        <div key={i} style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: INK, marginBottom: 2 }}>“{q.phrase}”</div>
-          <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: 11, lineHeight: 1.45, color: INK, background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "10px 12px", margin: 0, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", maxHeight: 220, overflow: "auto" }}>{JSON.stringify(q.pipeline, null, 2)}</pre>
-        </div>
-      ))}
-    </details>
-  );
-}
-
 // Turn the current grounding into a gold-note fixture (evidence graph → facts),
 // shown as ready-to-paste JSON for lib/gold-notes.js. This closes the loop:
 // author the benchmark's ground truth from real, human-reviewed groundings.
@@ -848,8 +1033,10 @@ function GoldRecordPanel({ results, noteText, languageCode = "en" }) {
   );
 }
 
-function ConceptsView({ results, principal, llm = {}, onSave, saveState = {}, languageCode = "en" }) {
+function ConceptsView({ results, principal, proposal = {}, llm = {}, onSave, saveState = {}, languageCode = "en" }) {
   const grounded = results.filter((r) => r.topCandidate);
+  const unmapped = results.filter(r=>!r.topCandidate&&r.kind!=='context');
+  const [reviewedMappings, setReviewedMappings] = useState({});
   const llmByMention = llm.byMention || {};
   const VIOLET = "#8F4FBF";
 
@@ -870,21 +1057,29 @@ function ConceptsView({ results, principal, llm = {}, onSave, saveState = {}, la
       phrase: (r.span && r.span.text) || r.phrase,
       assertion: r.assertion || "present",
       experiencer: r.experiencer || "patient",
-      status: r.status,
+      status: llmPick && String(llmPick.conceptId) !== String(r.topCandidate.conceptId) ? "review" : r.status,
       confidencePct: r.confidencePct ?? 0,
       section: r.llmSection || "other",
+      temporality: r.temporality,
+      kind: r.kind,
+      workflow: r.workflow,
+      clinicalStatus: r.clinicalStatus,
+      sourceSpans: [{text:r.span?.text||r.phrase,start:r.span?.start,end:r.span?.end,mentionId:r.mentionId}],
+      attributes: r.attributes,
+      mappingReviewed: reviewedMappings[r.mentionId || `m${i}`] === true,
       candidates,
       defaultChoice: String((llmPick || r.topCandidate).conceptId),
       llmPicked: Boolean(llmPick),
-      rationale: decision?.rationale || null
+      rationale: (proposal.relatedDiagnoses||[]).find(c=>String(c.conceptId)===String(r.topCandidate.conceptId))?.reviewReason || decision?.rationale || r.semanticReview?.reason || null
     };
   });
   const mentions = [...groundedMentions, ...extraMentions];
+  const relatedIds = new Set((proposal.relatedDiagnoses||[]).map(c=>String(c.conceptId)));
 
   const [chosen, setChosen] = useState(() => {
     const init = {}; groundedMentions.forEach((m) => { init[m.key] = m.defaultChoice; }); return init;
   });
-  const chosenCandidate = (m) => m.candidates.find((c) => String(c.conceptId) === String(chosen[m.key])) || m.candidates[0];
+  const chosenCandidate = (m) => (m.candidates || []).find((c) => String(c.conceptId) === String(chosen[m.key])) || m.candidates?.[0];
 
   // Add a concept found via terminology search as a new (manual) review row.
   const addConcept = (concept, query) => {
@@ -912,35 +1107,62 @@ function ConceptsView({ results, principal, llm = {}, onSave, saveState = {}, la
 
   // Clinical role a coder would assign, based on the *chosen* candidate.
   const roleOf = (m) => {
+    if (!mappingCanSupportDiagnosis(m)) return "review";
+    if(relatedIds.has(String(chosenCandidate(m)?.conceptId))&&!m.mappingReviewed)return 'review';
+    if (discussionOnly(m)) return 'discussion';
     if (m.assertion === "absent") return "ruled-out";
     if (m.experiencer === "family" || m.assertion === "family-history") return "family-history";
     if (m.assertion === "planned") return "planned";
-    const tag = String(chosenCandidate(m)?.semanticTag || "").toLowerCase();
-    if (PROCEDURE_TAGS.includes(tag)) return "procedure";
-    if (PRODUCT_TAGS.includes(tag)) return "medication";
-    return "diagnosis";
+    return clinicalCodeRole(chosenCandidate(m),m);
   };
   const EXCLUDE_REASON = { "ruled-out": "negated / ruled out", planned: "planned / not yet done", "family-history": "family history" };
-  const CODEABLE_ROLES = ["diagnosis", "procedure", "medication"];
+  const CODEABLE_ROLES = ["diagnosis", "procedure", "test", "referral", "observation", "medication", "family-history", "planned", "ruled-out"];
 
   const diagnosisMentions = mentions.filter((m) => roleOf(m) === "diagnosis");
-  // Default principal: the mention whose chosen concept is the suggested
-  // primary, else the first diagnosis (highest-ranked; mentions preserve order).
-  const suggestedPrimary = (llm.primaryConceptId && llm.primaryConceptId !== "none" ? String(llm.primaryConceptId) : null)
-    || (principal ? String(principal.conceptId) : null);
-  const defaultPrincipalKey = diagnosisMentions.find((m) => String(chosen[m.key]) === suggestedPrimary)?.key
-    || (diagnosisMentions[0]?.key || null);
-  const [principalKey, setPrincipalKey] = useState(defaultPrincipalKey);
+  // The scored ranking (section, assertion, evidence, hierarchy) orders the
+  // diagnoses; concepts it merged into a descendant point at that descendant.
+  const rankOf = new Map();
+  (proposal.principalDiagnosisCandidates || []).concat(proposal.comorbidities || [], proposal.historicalDiagnoses || [], proposal.suspectedDiagnoses || [])
+    .forEach((item, index) => {
+      if (!rankOf.has(String(item.conceptId))) rankOf.set(String(item.conceptId), index);
+      (item.mergedConcepts || []).forEach((merged) => {
+        if (!rankOf.has(String(merged.conceptId))) rankOf.set(String(merged.conceptId), index + 0.5);
+      });
+    });
+  const rank = (m) => rankOf.get(String(chosen[m.key])) ?? Number.MAX_SAFE_INTEGER;
+  // Only a present diagnosis can be principal — not past history or a suspicion.
+  const principalEligible = diagnosisMentions.filter((m) => isPrincipalMention(m, chosenCandidate(m))).sort((a, b) => rank(a) - rank(b));
+  const ruleSuggestion = principal ? String(principal.conceptId) : null;
+  const llmSuggestion = principalEligible.some((m) => String(chosen[m.key]) === String(llm.primaryConceptId)) ? String(llm.primaryConceptId) : null;
+  const suggestedPrimary = llmSuggestion || ruleSuggestion;
+  const defaultPrincipalKey = principalEligible.find((m) => String(chosen[m.key]) === suggestedPrimary)?.key || null;
+  const [selectedPrincipalKey, setPrincipalKey] = useState(defaultPrincipalKey);
+  const principalKey = principalEligible.some((m) => m.key === selectedPrincipalKey) ? selectedPrincipalKey : null;
+  // When the two pickers disagree, the coder should see both rather than one
+  // silently overriding the other.
+  const pickDisagreement = llmSuggestion && ruleSuggestion && llmSuggestion !== ruleSuggestion
+    ? { rule: principal?.term || ruleSuggestion, llm: chosenCandidate(principalEligible.find((m) => String(chosen[m.key]) === llmSuggestion) || {})?.term || llmSuggestion }
+    : null;
 
   const [accepted, setAccepted] = useState(() => {
     const init = {};
-    mentions.forEach((m) => { init[m.key] = CODEABLE_ROLES.includes(roleOf(m)) && m.status === "accepted"; });
+    // Past history, suspected diagnoses and presenting symptoms start unticked:
+    // the coder opts them in.
+    const isFinding = (m) => m.kind==='symptom'||canonicalSemanticTag(chosenCandidate(m)?.semanticTag) === "finding";
+    mentions.forEach((m) => {
+      const role = roleOf(m);
+      init[m.key] = ["diagnosis", "procedure", "test", "referral", "observation", "medication"].includes(role) && m.status === "accepted"
+        && (role !== "diagnosis" || (m.assertion === "present" && m.temporality !== "unknown" && !isFinding(m)));
+    });
     if (defaultPrincipalKey) init[defaultPrincipalKey] = true;
     return init;
   });
-  const toggle = (key) => setAccepted((cur) => ({ ...cur, [key]: !cur[key] }));
-  const setPrincipal = (key) => { setPrincipalKey(key); setAccepted((cur) => ({ ...cur, [key]: true })); };
-  const chooseConcept = (key, conceptId) => setChosen((cur) => ({ ...cur, [key]: String(conceptId) }));
+  const toggle = (key) => { setReviewedMappings(cur => ({ ...cur, [key]: true })); setAccepted((cur) => ({ ...cur, [key]: !cur[key] })); };
+  const setPrincipal = (key) => {
+    if (!principalEligible.some((m) => m.key === key)) return;
+    setPrincipalKey(key); setAccepted((cur) => ({ ...cur, [key]: true }));
+  };
+  const chooseConcept = (key, conceptId) => { setReviewedMappings(cur => ({ ...cur, [key]: true })); setChosen((cur) => ({ ...cur, [key]: String(conceptId) })); };
   const [outputLens, setOutputLens] = useState("codings");
   const [sectionFilter, setSectionFilter] = useState("all");
 
@@ -952,36 +1174,45 @@ function ConceptsView({ results, principal, llm = {}, onSave, saveState = {}, la
     return {
       conceptId: String(c?.conceptId || ""),
       term: c?.term || m.phrase,
-      tag: String(c?.semanticTag || "").toLowerCase(),
+      tag: canonicalSemanticTag(c?.semanticTag),
+      codeRole: clinicalCodeRole(c,m),
       ancestorIds: Array.isArray(c?.ancestorIds) ? c.ancestorIds.map(String) : [],
       assertion: m.assertion,
       subject: m.experiencer,
       section: m.section || "other",
-      phrase: m.phrase
+      phrase: m.phrase,
+      accepted: accepted[m.key] === true, workflow: m.workflow, temporality: m.temporality, attributes: m.attributes, clinicalStatus:m.clinicalStatus, kind:m.kind, sourceSpans:m.sourceSpans
     };
   });
 
   // Codings: dedupe by chosen concept so the same code isn't saved twice.
   const acceptedCodings = (() => {
-    const seen = new Set(); const out = [];
-    mentions.filter((m) => accepted[m.key]).forEach((m) => {
+    const out = [];
+    mentions.filter((m) => accepted[m.key] && CODEABLE_ROLES.includes(roleOf(m))).forEach((m) => {
       const c = chosenCandidate(m); if (!c) return;
-      const id = String(c.conceptId); if (seen.has(id)) return; seen.add(id);
+      const id = String(c.conceptId);
       const baseRole = roleOf(m);
       const role = m.key === principalKey && baseRole === "diagnosis" ? "principal"
         : baseRole === "diagnosis" ? "secondary" : baseRole;
       out.push({
         conceptId: id,
+        ancestorIds: Array.isArray(c.ancestorIds) ? c.ancestorIds.map(String) : [],
         display: c.term,
         semanticTag: c.semanticTag || null,
         role,
-        target: baseRole === "procedure" ? "Procedure.code" : baseRole === "medication" ? "MedicationStatement.medication" : "Condition.code",
+        target: (()=>{const resource=codingToFhirResource({conceptId:id,term:c.term,codeRole:clinicalCodeRole(c,m),kind:m.kind,subject:m.experiencer,assertion:m.assertion,workflow:m.workflow,attributes:m.attributes});return `${resource?.resourceType||'Condition'}.${m.experiencer==='family'?'condition.code':clinicalCodeRole(c,m)==='medication'?'medicationCodeableConcept':'code'}`;})(),
         assertion: m.assertion,
         subject: m.experiencer,
+        temporality: m.temporality || null,
+        workflow: m.workflow || null,
+        kind:m.kind||null,
+        clinicalStatus:m.clinicalStatus||'unknown',
+        sourceSpans:m.sourceSpans||[],
+        attributes: m.attributes || {},
         evidence: m.phrase ? { text: m.phrase } : null
       });
     });
-    return out;
+    return mergeClinicalCodings(out);
   })();
   const principalCandidate = (() => {
     const m = mentions.find((x) => x.key === principalKey);
@@ -1018,11 +1249,19 @@ function ConceptsView({ results, principal, llm = {}, onSave, saveState = {}, la
         </div>
       ) : null}
 
-      {grounded.length === 0 ? (
-        <p style={sub}>No concepts grounded (search may have timed out — try Re-run).</p>
-      ) : (
+      {unmapped.length ? <div style={{border:`1px solid ${BORDER}`,borderRadius:10,padding:12,marginBottom:12}}>
+        <strong style={{color:INK,fontSize:13}}>Source facts without a supported code ({unmapped.length})</strong>
+        <p style={{...sub,margin:'4px 0 8px'}}>These facts remain in the note. Review coverage or search for a suitable concept before including a coding.</p>
+        {unmapped.map(r=><div key={r.mentionId} style={{borderTop:`1px solid ${BORDER}`,padding:'7px 0'}}>
+          <div style={{fontSize:12.5,color:INK}}>“{r.span?.text||r.phrase}”</div>
+          <div style={{fontSize:11,color:'#5C6C75'}}>{r.assertion} · {r.temporality||'unknown'} · {r.semanticReview?.reason||r.error||'No supported candidate retrieved'}</div>
+        </div>)}
+      </div> : null}
+      {(
         <ReviewWorklist
           mentions={mentions}
+          rank={rank}
+          pickDisagreement={pickDisagreement}
           roleOf={roleOf}
           chosen={chosen}
           chooseConcept={chooseConcept}
@@ -1181,9 +1420,6 @@ const OUTPUT_LENSES = [
   { key: "corpus", label: "Corpus query" },
   { key: "fhir", label: "FHIR bundle" }
 ];
-const DISORDER_TAGS = ["disorder", "finding", "trastorno", "hallazgo"];
-const PROCEDURE_TAGS = ["procedure", "procedimiento", "regime/therapy", "régimen/tratamiento"];
-const PRODUCT_TAGS = ["product", "producto", "medicinal product", "clinical drug", "medicinal product form", "fármaco de uso clínico", "producto medicinal", "forma farmacéutica de producto medicinal", "presentación farmacéutica"];
 // Scope roots chosen to exist in the demo scope (cardio / oncology / diabetes).
 const SCOPE_ROOTS = [
   { label: "Diabetes mellitus", root: "73211009" },
@@ -1268,17 +1504,17 @@ function LensList({ intro, items, empty }) {
 }
 
 function OutputLensView({ lens, codings: codingsIn }) {
-  const codings = (Array.isArray(codingsIn) ? codingsIn : []).filter((c) => c.conceptId);
-  const present = codings.filter((c) => c.assertion !== "absent" && c.subject === "patient");
+  const codings = mergeClinicalCodings((Array.isArray(codingsIn) ? codingsIn : []).filter((c) => c.conceptId && c.accepted));
+  const present = codings.filter((c) => c.assertion === "present" && c.subject === "patient" && c.temporality !== "unknown" && c.clinicalStatus !== 'resolved');
 
   if (lens === "problems") {
-    return <LensList intro="Active patient problems — present findings and disorders, ready for a coded problem list (Condition.code)." empty="No present patient disorders grounded." items={present.filter((c) => DISORDER_TAGS.includes(c.tag))} />;
+    return <LensList intro="Active patient problems — present findings and disorders, ready for a coded problem list (Condition.code)." empty="No present patient disorders grounded." items={present.filter((c) => c.codeRole === "diagnosis")} />;
   }
   if (lens === "procedures") {
-    return <LensList intro="Procedures mentioned for the patient (Procedure.code)." empty="No procedures grounded." items={present.filter((c) => PROCEDURE_TAGS.includes(c.tag))} />;
+    return <LensList intro="Procedures mentioned for the patient (Procedure.code)." empty="No procedures grounded." items={present.filter((c) => c.codeRole === "procedure")} />;
   }
   if (lens === "medications") {
-    return <LensList intro="Medicinal products mentioned (MedicationStatement.medication)." empty="No medications grounded." items={present.filter((c) => PRODUCT_TAGS.includes(c.tag))} />;
+    return <LensList intro="Medicinal products mentioned (MedicationStatement.medication)." empty="No medications grounded." items={present.filter((c) => c.codeRole === "medication")} />;
   }
   if (lens === "family") {
     return <LensList intro="Family-history mentions — recorded about relatives, not the patient (FamilyMemberHistory)." empty="No family-history mentions." items={codings.filter((c) => c.subject === "family")} />;
@@ -1365,32 +1601,14 @@ function CorpusLens({ present }) {
 // FHIR: deterministic serialization of the grounded codings into a Bundle.
 // No LLM, no DB call — MongoDB already supplied every SNOMED code.
 function fhirResourceFor(c) {
-  const code = { coding: [{ system: "http://snomed.info/sct", code: c.conceptId, display: c.term }], text: c.term };
-  const subject = { reference: "Patient/example" };
-  if (c.subject === "family") {
-    return { resourceType: "FamilyMemberHistory", status: "completed", patient: subject, condition: [{ code }] };
-  }
-  if (PROCEDURE_TAGS.includes(c.tag)) {
-    return { resourceType: "Procedure", status: "completed", code, subject };
-  }
-  if (PRODUCT_TAGS.includes(c.tag)) {
-    return { resourceType: "MedicationStatement", status: "active", medicationCodeableConcept: code, subject };
-  }
-  const verification = c.assertion === "absent" ? "refuted" : c.assertion === "suspected" ? "provisional" : "confirmed";
-  return {
-    resourceType: "Condition",
-    clinicalStatus: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-clinical", code: c.assertion === "absent" ? "inactive" : "active" }] },
-    verificationStatus: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/condition-ver-status", code: verification }] },
-    code,
-    subject
-  };
+  return codingToFhirResource(c);
 }
 
 function FhirLens({ codings }) {
   const bundle = {
     resourceType: "Bundle",
     type: "collection",
-    entry: codings.map((c) => ({ resource: fhirResourceFor(c) }))
+    entry: codings.map(fhirResourceFor).filter(Boolean).map((resource) => ({ resource }))
   };
   const json = JSON.stringify(bundle, null, 2);
   return (

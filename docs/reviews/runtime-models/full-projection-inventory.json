@@ -1,0 +1,17 @@
+{
+  "stage": "projection-inventory",
+  "releaseId": "20260601",
+  "activeConcepts": 399045,
+  "englishConcepts": 383561,
+  "spanishConcepts": 399045,
+  "englishDescriptions": 1022282,
+  "spanishDescriptions": 952299,
+  "descriptionScope": "All active EN/ES FSN/synonym source descriptions, before projection metadata-tag exclusions",
+  "existingProjection": {
+    "documents": 132788,
+    "logicalBytes": 283902307,
+    "storageBytes": 120434688,
+    "ordinaryIndexBytes": 102326272
+  },
+  "note": "Read-only inventory. No projections or indexes were created or modified."
+}

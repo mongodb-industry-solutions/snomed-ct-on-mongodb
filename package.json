@@ -17,7 +17,18 @@
     "collections:retire": "node scripts/dropRetiredCollections.mjs",
     "releaseid:stamp": "node scripts/stampReleaseId.mjs",
     "model:harden": "node scripts/normalizeSourceModel.mjs",
-    "model:stamp-state": "node scripts/stampModelState.mjs"
+    "model:stamp-state": "node scripts/stampModelState.mjs",
+    "mappings:import": "node scripts/importMappings.mjs",
+    "terms:ensure-demo": "node scripts/ensureDemoProjection.mjs",
+    "terms:audit-coverage": "node scripts/auditTerminologyCoverage.mjs",
+    "terms:ensure-mentions": "node scripts/ensureMentionProjection.mjs",
+    "grounding:validate": "node scripts/validateGroundingExamples.mjs",
+    "grounding:check": "node scripts/checkGroundingRuns.mjs",
+    "test": "node --test tests/*.test.js",
+    "mappings:fetch-demo": "node scripts/fetchDemoMappings.mjs",
+    "notes:seed": "node scripts/seedClinicalNotes.mjs",
+    "notes:verify": "node scripts/verifyClinicalSearchExamples.mjs",
+    "demo:verify": "node scripts/verifyDemoDeployment.mjs"
   },
   "dependencies": {
     "@leafygreen-ui/badge": "^10.2.4",
