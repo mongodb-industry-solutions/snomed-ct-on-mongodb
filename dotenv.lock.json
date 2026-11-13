@@ -194,7 +194,7 @@
       "category": "hybridSearch",
       "required": false,
       "secret": false,
-      "default": "appRrf",
+      "default": "rankFusion",
       "description": "Hybrid search fusion strategy."
     },
     "HYBRID_NATIVE_FUSION_MAX_TIME_MS": {
@@ -202,7 +202,7 @@
       "required": false,
       "secret": false,
       "default": "8000",
-      "description": "Bound an optional native fusion experiment before application-side fallback."
+      "description": "Maximum native fusion aggregation duration; errors are visible without app-side fallback."
     },
     "HYBRID_CANDIDATE_POOL": {
       "category": "hybridSearch",
@@ -637,6 +637,13 @@
       "secret": false,
       "default": "true",
       "description": "Enable Voyage reranking after hybrid fusion when a key is configured."
+    },
+    "HYBRID_RERANK_MODE": {
+      "category": "hybridSearch",
+      "required": false,
+      "secret": false,
+      "default": "voyage",
+      "description": "voyage calls the cross-encoder after fusion; native uses $rerank and requires Atlas MongoDB 9.0+ with native reranking enabled."
     }
   }
 }

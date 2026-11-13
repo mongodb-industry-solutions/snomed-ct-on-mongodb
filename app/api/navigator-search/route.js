@@ -203,6 +203,9 @@ export async function POST(request) {
       results
     });
   } catch (error) {
+    if (error.code === "NATIVE_FUSION_UNAVAILABLE" || error.code === "NATIVE_RERANK_REQUIRES_NATIVE_FUSION" || error.code === "INVALID_RERANK_MODE") {
+      return fail(error.message, error.status, { code: error.code, latencyMs: elapsedMs(startedAt) });
+    }
     return fail("Navigator search failed", 500, {
       ...buildMongoErrorPayload(error),
       latencyMs: elapsedMs(startedAt)

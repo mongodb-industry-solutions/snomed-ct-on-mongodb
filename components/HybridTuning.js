@@ -162,7 +162,7 @@ export function HybridTuningPanel({ open, setOpen, tuning, setTuning, defaults, 
             <label style={{ ...fieldLabel, alignContent: "end" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <input type="checkbox" checked={tuning.rerank} onChange={(e) => set("rerank", e.target.checked)} />
-                Voyage rerank
+                {tuning.rerankMode === "native" ? "MongoDB native rerank" : "Voyage rerank"}
               </span>
             </label>
           </div>
@@ -185,7 +185,7 @@ export function HybridTuningPanel({ open, setOpen, tuning, setTuning, defaults, 
 }
 
 // One-line statement of the algorithm the server actually ran — which can
-// differ from the requested one when native fusion falls back.
+// differ from the requested one when optional Voyage reranking is unavailable.
 export function FusionSummary({ plan, algorithm }) {
   const a = algorithm || plan?.algorithm;
   if (!a) return null;
@@ -197,7 +197,7 @@ export function FusionSummary({ plan, algorithm }) {
       <code style={inlineCode}>{a.formula}</code>
       <span>lexical {a.weights.lexical} ({pct(a.weights.lexical)}%) · semantic {a.weights.semantic} ({pct(a.weights.semantic)}%)</span>
       <span>· {a.candidatePool} candidates per engine</span>
-      <span>· {a.rerank.applied ? `Voyage rerank of top ${a.rerank.pool}` : a.rerank.requested ? "rerank unavailable" : "rerank off"}</span>
+      <span>· {a.rerank.applied ? `${a.rerank.mode === "native" ? "MongoDB $rerank" : "Voyage rerank"} of top ${a.rerank.pool}` : a.rerank.requested ? "rerank unavailable" : "rerank off"}</span>
       <Badge variant="lightgray">{a.engine}</Badge>
       {a.fallbackReason ? (
         <span style={{ color: "#8A6D1F", width: "100%" }}>Native fusion fell back to app-side RRF: {a.fallbackReason}</span>

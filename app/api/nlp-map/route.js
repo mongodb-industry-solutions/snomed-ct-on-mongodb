@@ -1046,6 +1046,7 @@ function summarizeCandidate(candidate, normalizedPhrase) {
     conceptId: candidate.conceptId,
     descriptionId: candidate.descriptionId || null,
     term: candidate.term,
+    preferredTerm: candidate.preferredTerm || candidate.term,
     fsn: candidate.fsn || null,
     semanticTag: candidate.semanticTag || null,
     languageCode: candidate.languageCode || null,
@@ -1145,7 +1146,7 @@ function analyzeGroundingCandidate(entry, candidate) {
 }
 
 function rerankGroundingMatches(entry, matches) {
-  return [...(Array.isArray(matches) ? matches : [])]
+  const assessed = [...(Array.isArray(matches) ? matches : [])]
     .map((candidate, index) => {
       const analysis = analyzeGroundingCandidate(entry, candidate);
       return {
@@ -1155,8 +1156,11 @@ function rerankGroundingMatches(entry, matches) {
         _groundingScore: analysis.groundingScore,
         _groundingFlags: analysis.flags
       };
-    })
-    .sort((left, right) => {
+    });
+  // Native retrieval/Voyage owns candidate order. The application still
+  // assesses clinical evidence, but does not replace the returned ranking.
+  if (entry.rankingSource) return assessed;
+  return assessed.sort((left, right) => {
       const evidenceDiff = compareGroundingEvidence(left, right);
       if (evidenceDiff !== 0) return evidenceDiff;
       const groundingDiff = Number(right?._groundingScore || 0) - Number(left?._groundingScore || 0);
@@ -1810,6 +1814,17 @@ async function resolvePhrase(
   const trace = [];
   const done = (result) => ({ ...result, trace });
 
+  if (useHybrid && hybridCfg.fusionMode !== "appRrf") {
+    const hybrid = await runHybridSearch({ collection, query: phraseEntry.phrase,
+      vectorQuery: [phraseEntry.phrase, phraseEntry.sourceSentence || phraseEntry.sentence].filter(Boolean).join('\n'),
+      languageCode, effectiveReleaseId: releaseId, areaConceptId, conceptIdScope, textIndex,
+      searchConfig: getSearchConfig(), hybridConfig: { ...hybridCfg, includeExactMatches: true },
+      limit: Math.max(perPhraseLimit * 3, 8), trace });
+    return done({ ...phraseEntry, span, strategy: hybrid.reranked ? "hybrid-rerank" : "hybrid-fusion",
+      rankingSource: hybrid.stats.rerankMode === "voyage" ? "voyage" : hybrid.stats.engine,
+      matches: (hybrid.results || []).map(normalizeHybridMatch) });
+  }
+
   try {
     let exactResults = [];
     try {
@@ -2145,6 +2160,8 @@ export async function POST(request) {
       const rwg = reviewed.map((e) => { const m = gmap.get(e.mentionId); return { ...e, cueIds: m?.appliedCueIds || [], relationIds: m?.relationIds || [], groundedNodeId: m?.groundedNodeId || null }; });
       return ok({ ok: true, pattern: "nlp-map", extractOnly: true, retrieved: false, extractionPolicy:EXTRACTION_POLICY_VERSION,extractor, extractorModel, extractorError, extractorUsage, extractorPrompt, extractorRaw,extractorRequests, languageCode, results: rwg, evidenceGraph, mentions: extractedMentions || [], latencyMs: elapsedMs(startedAt) });
     }
+    const retrievalStartedAt = process.hrtime.bigint();
+    const preparationMs = elapsedMs(startedAt);
     const mapped = await mapWithConcurrency(
       candidatePhrases,
       MAX_GROUNDER_CONCURRENCY,
@@ -2165,6 +2182,7 @@ export async function POST(request) {
         })
     );
 
+    const candidateRetrievalMs = elapsedMs(retrievalStartedAt);
     const timedOutPhrases = mapped.filter((item) => item.strategy === "mongodb-timeout").length;
     // The per-mention trace is returned once, in retrievalTraces below — keep it
     // off the result entries so the payload doesn't carry every pipeline twice.
@@ -2173,7 +2191,9 @@ export async function POST(request) {
       ...entry,
       mentionId: buildMentionId(entry, index)
     }));
+    const semanticStartedAt = process.hrtime.bigint();
     const semantic = await verifyGroundingSemantics(preliminaryResults,{languageCode,summarize:summarizeCandidate,model:modelOverride,text});
+    const sourceVerificationMs = elapsedMs(semanticStartedAt);
     const results = semantic.results;
 
     // Retrieval-only run: return, per mention, the exact sequence of steps
@@ -2189,10 +2209,10 @@ export async function POST(request) {
           steps.push({
             kind: "app",
             role: "grounding-scorer",
-            label: "Grounding scorer (in the app)",
+            label: "Clinical evidence assessment",
             outcome: top ? "ok" : "skipped",
             detail: top
-              ? `Re-ranked the candidates for this mention's context (negation, laterality, over-specific terms, semantic tag) and picked “${top.term}” (#${top.conceptId}) — status: ${r.status}.`
+              ? `Assessed the candidates against this mention's context (negation, laterality, specificity and semantic kind). The selected concept is “${top.term}” (#${top.conceptId}) — status: ${r.status}.`
               : `No candidate survived — status: ${r.status}.`,
             rows: (r.topCandidate ? 1 : 0) + (r.alternatives || []).length
           });
@@ -2278,6 +2298,7 @@ export async function POST(request) {
         scopeCount: conceptIdScope.length,
         perPhraseLimit: profileSettings.perPhraseLimit,
         searchTimeoutMs,
+        timingsMs: { preparation: preparationMs, candidateRetrieval: candidateRetrievalMs, sourceVerification: sourceVerificationMs },
         latencyMs
       },
       retrieval: {
@@ -2394,6 +2415,9 @@ export async function POST(request) {
 
     return ok(payload);
   } catch (error) {
+    if (error.code === "NATIVE_FUSION_UNAVAILABLE" || error.code === "NATIVE_RERANK_REQUIRES_NATIVE_FUSION" || error.code === "INVALID_RERANK_MODE") {
+      return fail(error.message, error.status || 503, { code: error.code, latencyMs: elapsedMs(startedAt) });
+    }
     return fail("NLP mapping failed", 500, {
       ...buildMongoErrorPayload(error),
       latencyMs: elapsedMs(startedAt)

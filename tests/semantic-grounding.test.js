@@ -18,6 +18,17 @@ test('a missing source qualifier prevents automatic acceptance even with a valid
  assert.equal(applySemanticDecision(row,{...d,relation:'equivalent'}).status,'review');
  assert.equal(applySemanticDecision(row,{...d,conceptId:'100002',relation:'equivalent',missingQualifiers:[]}).status,'accepted');
 });
+test('explicit source laterality cannot be omitted by an LLM equivalent decision',()=>{
+ for(const [source,term] of [['left limb fracture','Fracture of limb'],['fractura de miembro izquierdo','fractura de miembro']]){
+  const entry={...row,verbatim:source,sentence:source,topCandidate:{conceptId:'100001',term,fsn:term,semanticTag:'disorder',active:true}};
+  const result=applySemanticDecision(entry,{conceptId:'100001',relation:'equivalent',evidence:[source],missingQualifiers:[]});
+  assert.equal(result.status,'review');
+  assert.ok(result.semanticReview.missingQualifiers.includes('source laterality: left'));
+ }
+ const source='left limb fracture';
+ const entry={...row,verbatim:source,sentence:source,topCandidate:{conceptId:'100001',term:'Fracture of left limb',fsn:'Fracture of left limb (disorder)',semanticTag:'disorder',active:true}};
+ assert.equal(applySemanticDecision(entry,{conceptId:'100001',relation:'equivalent',evidence:[source],missingQualifiers:[]}).status,'accepted');
+});
 test('a symptom interpreted as compatible with a disease requires review',()=>{
  const entry={...row,kind:'symptom',attributes:{compatible_with:'a disease'}};
  assert.equal(applySemanticDecision(entry,{conceptId:'100001',relation:'equivalent',evidence:['condition stage 3'],missingQualifiers:[]}).status,'review');
@@ -88,6 +99,11 @@ test('unnumbered confirmed assessments outrank their chief-complaint symptoms',(
  const disease=diagnosis('100002');
  assert.equal(computeDiagnosisProposal([symptom,disease]).principal.conceptId,'100002');
  assert.equal(computeDiagnosisProposal([symptom,{...disease,status:'review'}]).principal,null);
+});
+test('a missing leading assessment does not turn the third numbered diagnosis into the principal',()=>{
+ const unresolved=diagnosis('100001',{start:null,section:'active',evidenceStatus:'unanchored',status:'abstain',topCandidate:null,phrase:'encounter condition'});
+ const comorbidity=diagnosis('100002',{start:60,sentence:'3. A separate condition.',phrase:'separate condition'});
+ assert.equal(computeDiagnosisProposal([unresolved,comorbidity]).principal,null);
 });
 test('the same documented encounter term can use an accepted occurrence elsewhere without promoting an unrelated comorbidity',()=>{
  const unresolved=diagnosis('100001',{phrase:'a condition',section:'Reason for admission',status:'review'});

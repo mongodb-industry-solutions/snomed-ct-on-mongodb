@@ -6,7 +6,7 @@ import path from 'node:path';
 import {MongoClient} from 'mongodb';
 import {getMongoConfig,getSemanticsConfig} from '../lib/config.js';
 import {normalizeSearchText} from '../lib/search-normalization.js';
-import {TERM_DESCRIPTION_TYPES,candidateKindCompatible,candidateWouldInvertNegation} from '../lib/grounding-policy.js';
+import {TERM_DESCRIPTION_TYPES,candidateKindCompatible,candidateWouldInvertNegation,missingExplicitLaterality} from '../lib/grounding-policy.js';
 import {isClinicalFinding} from '../lib/clinical-code-type.js';
 
 const directory=process.argv[2];
@@ -45,6 +45,7 @@ try {
       if(!candidateKindCompatible(r,c))issues.push(`${label}:incompatible-semantic-kind`);
       if(r.status==='accepted'){
         if(candidateWouldInvertNegation(r,c))issues.push(`${label}:accepted-code-inverts-source-negation`);
+        if(missingExplicitLaterality(r,c).length)issues.push(`${label}:accepted-code-omits-explicit-source-laterality`);
         const canonical=source?.descriptions?.some(d=>[true,1,'1'].includes(d.active)&&TERM_DESCRIPTION_TYPES.includes(d.typeId)&&d.languageCode===run.request.languageCode&&normalizeSearchText(d.term)===normalizeSearchText(r.phrase));
         const verified=r.semanticReview?.status==='verified' && r.semanticReview.relation==='equivalent'
           && r.semanticReview.missingQualifiers?.length===0 && r.semanticReview.evidence?.length>0
@@ -62,7 +63,13 @@ try {
     const steps=(response.retrievalTraces||[]).flatMap(t=>t.steps||[]);
     const branches=role=>steps.filter(s=>s.role===role&&s.outcome==='ok').length;
     const branchErrors=steps.filter(s=>['app-rrf-vector','app-rrf-lexical'].includes(s.role)&&['error','timeout'].includes(s.outcome)).length;
-    rows.push({file:run.file,ok:response.ok,mentions:results.length,anchored:results.filter(r=>r.evidenceStatus==='anchored').length,accepted:response.stats?.acceptedCount,review:response.stats?.reviewCount,abstain:response.stats?.abstainCount,timeouts:response.stats?.timedOutPhrases,canonicalAcceptedMatches:canonicalMatches,semanticAcceptedMatches:semanticMatches,semanticFailures:response.stats?.semanticFailureCount||0,principal:response.principalDiagnosis?.term||null,comorbidities:(response.comorbidities||[]).map(c=>c.term),lexicalBranches:branches('app-rrf-lexical'),vectorBranches:branches('app-rrf-vector'),branchErrors,issues});
+    const mongodbQueries=steps.filter(s=>s.kind==='mongodb').length;
+    const nativeBranches=steps.filter(s=>s.kind==='mongodb'&&['native-rankFusion','native-scoreFusion'].includes(s.role)).length;
+    if(response.retrieval?.searchMode==='hybrid'&&response.retrieval.tuning?.fusionMode!=='appRrf'){
+      const searchedMentions=results.filter(r=>r.strategy!=='skipped-anchor').length;
+      if(mongodbQueries!==searchedMentions||nativeBranches!==searchedMentions)issues.push('native-retrieval-is-not-one-aggregation-per-searched-mention');
+    }
+    rows.push({file:run.file,ok:response.ok,mentions:results.length,anchored:results.filter(r=>r.evidenceStatus==='anchored').length,accepted:response.stats?.acceptedCount,review:response.stats?.reviewCount,abstain:response.stats?.abstainCount,timeouts:response.stats?.timedOutPhrases,canonicalAcceptedMatches:canonicalMatches,semanticAcceptedMatches:semanticMatches,semanticFailures:response.stats?.semanticFailureCount||0,principal:response.principalDiagnosis?.term||null,comorbidities:(response.comorbidities||[]).map(c=>c.term),mongodbQueries,nativeBranches,lexicalBranches:branches('app-rrf-lexical'),vectorBranches:branches('app-rrf-vector'),branchErrors,issues});
   }
   report={checkedAt:new Date().toISOString(),releaseId,runs:rows.length,sourceCodesChecked:ids.length,contractIssues:rows.flatMap(r=>r.issues).length,semanticAccuracyClaim:false,rows};
   await writeFile(path.join(directory,'validation-checks.json'),JSON.stringify(report,null,2)+'\n');
