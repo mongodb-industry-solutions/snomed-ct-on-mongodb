@@ -59,7 +59,7 @@ dotenv.*.local
 *.pfx
 
 # Node / Next.js build output
-node_modules/
+node_modules
 **/node_modules/
 .next/
 .next*/
@@ -78,6 +78,9 @@ build/
 *.tsbuildinfo
 
 # Local raw data and release artifacts
+artifacts/
+docs/reviews/full-example-review/benchmark-runs/
+docs/reviews/full-example-review/canonical-source-audit.json
 _rf2_tmp/
 data/
 tmp/

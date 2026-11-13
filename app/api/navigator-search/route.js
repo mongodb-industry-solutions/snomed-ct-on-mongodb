@@ -6,13 +6,19 @@ import { buildNavigatorSearchPipeline, buildNavigatorVectorFilter, buildVectorSe
 import { ensureSearchIndexReady } from "@/lib/search-readiness";
 import { buildMongoErrorPayload } from "@/lib/mongo-error";
 import { rerankNavigatorResults } from "@/lib/search-normalization";
-import { runHybridSearch } from "@/lib/hybrid-search";
+import { describeHybridTuning, resolveHybridTuning, runHybridSearch } from "@/lib/hybrid-search";
 import { emitUsageEventSafe } from "@/lib/usage-events";
 import { elapsedMs, fail, ok, parseJson } from "@/lib/http";
 
 const SEARCH_MODES = new Set(["lexical", "vector", "hybrid"]);
 
 export const runtime = "nodejs";
+
+// Hybrid fusion defaults (from env), so the UI can show and tune them before
+// the first search.
+export async function GET() {
+  return ok({ ok: true, tuning: describeHybridTuning(getHybridSearchConfig()) });
+}
 
 export async function POST(request) {
   const startedAt = process.hrtime.bigint();
@@ -66,9 +72,14 @@ export async function POST(request) {
     let modeStats = {};
     let pipeline = null;
     let queryPlan = null;
+    let tuning = null;
 
     if (mode === "hybrid") {
       strategy = "hybrid-fusion";
+      // Optional per-request tuning (weights, fusion mode, pools, rerank) over
+      // the env defaults; the effective values are echoed back as `tuning`.
+      const hybridConfig = resolveHybridTuning(getHybridSearchConfig(), body.tuning);
+      tuning = describeHybridTuning(hybridConfig);
       const hybrid = await runHybridSearch({
         collection,
         query,
@@ -78,7 +89,7 @@ export async function POST(request) {
         conceptIdScope,
         textIndex,
         searchConfig,
-        hybridConfig: getHybridSearchConfig(),
+        hybridConfig,
         limit
       });
       results = hybrid.results;
@@ -161,7 +172,9 @@ export async function POST(request) {
         areaConceptId: areaConceptId || null,
         ecl: ecl || null,
         scopeMode: scope?.mode || "none",
-        scopeCount: Array.isArray(conceptIdScope) ? conceptIdScope.length : 0
+        scopeCount: Array.isArray(conceptIdScope) ? conceptIdScope.length : 0,
+        engine: modeStats.engine || null,
+        tuning
       }
     });
 
@@ -176,6 +189,7 @@ export async function POST(request) {
       scope,
       pipeline: pipeline ? redactLargeConceptScopes(pipeline) : null,
       queryPlan: queryPlan ? redactLargeConceptScopesInObject(queryPlan) : null,
+      tuning,
       stats: {
         returned: results.length,
         ...modeStats,

@@ -1,0 +1,50 @@
+{
+  "checks": [
+    {
+      "check": "runtime-catalog",
+      "models": 376,
+      "defaultModel": "gpt-5.5"
+    },
+    {
+      "check": "benchmark-catalog",
+      "models": 376
+    },
+    {
+      "check": "selected-model-extraction",
+      "requested": "gpt-5.4",
+      "status": 200,
+      "ok": true,
+      "executed": "gpt-5.4",
+      "mentions": 2
+    },
+    {
+      "check": "selected-model-extraction",
+      "requested": "gpt-4.1",
+      "status": 200,
+      "ok": true,
+      "executed": "gpt-4.1",
+      "mentions": 2
+    },
+    {
+      "check": "selected-model-extraction",
+      "requested": "claude-opus-4-8",
+      "status": 200,
+      "ok": true,
+      "executed": "claude-opus-4-8",
+      "mentions": 2
+    },
+    {
+      "check": "unavailable-model-rejected",
+      "path": "/api/nlp-map",
+      "status": 400,
+      "code": "llm-model-unavailable"
+    },
+    {
+      "check": "unavailable-model-rejected",
+      "path": "/api/benchmark",
+      "status": 400,
+      "code": "llm-model-unavailable"
+    }
+  ],
+  "passed": true
+}

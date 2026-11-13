@@ -1,0 +1,6706 @@
+{
+  "replayedAt": "2026-11-12T16:21:03.453Z",
+  "diagnosisPolicyVersion": "source-priority-v4",
+  "basis": "Frozen results from actual retrieval and semantic verification; diagnosis selection replayed without another model call",
+  "runs": 16,
+  "semanticAccuracyClaim": false,
+  "rows": [
+    {
+      "file": "ex-chestpain-en-hybrid.json",
+      "groundingHealthy": true,
+      "capturedDiagnosisPolicy": "source-priority-v4",
+      "capturedPrincipal": {
+        "conceptId": "29857009",
+        "term": "Chest pain",
+        "semanticTag": "finding",
+        "ancestorIds": [
+          "301366005",
+          "276435006",
+          "298705000",
+          "302292003",
+          "102957003",
+          "138875005",
+          "106147001",
+          "699697007",
+          "22253000",
+          "609623002",
+          "404684003",
+          "279001004"
+        ],
+        "kind": "symptom",
+        "encounterPriority": 3,
+        "temporality": "current",
+        "clinicalStatus": "resolved",
+        "score": 73,
+        "confidencePct": 100,
+        "supportingSpanCount": 1,
+        "supportingSpans": [
+          "Chest pain"
+        ],
+        "matchedTerms": [
+          "Chest pain"
+        ],
+        "supportingSections": [
+          "Chief complaint"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Chief complaint",
+          "assertion:present",
+          "semanticTag:finding"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 73,
+          "repeatBonus": 0,
+          "contributions": [
+            {
+              "phrase": "Chest pain",
+              "section": "Chief complaint",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 2
+              },
+              "score": 73
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "principal": {
+        "conceptId": "29857009",
+        "term": "Chest pain",
+        "semanticTag": "finding",
+        "ancestorIds": [
+          "301366005",
+          "276435006",
+          "298705000",
+          "302292003",
+          "102957003",
+          "138875005",
+          "106147001",
+          "699697007",
+          "22253000",
+          "609623002",
+          "404684003",
+          "279001004"
+        ],
+        "kind": "symptom",
+        "encounterPriority": 3,
+        "temporality": "current",
+        "clinicalStatus": "resolved",
+        "score": 73,
+        "confidencePct": 100,
+        "supportingSpanCount": 1,
+        "supportingSpans": [
+          "Chest pain"
+        ],
+        "matchedTerms": [
+          "Chest pain"
+        ],
+        "supportingSections": [
+          "Chief complaint"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Chief complaint",
+          "assertion:present",
+          "semanticTag:finding"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 73,
+          "repeatBonus": 0,
+          "contributions": [
+            {
+              "phrase": "Chest pain",
+              "section": "Chief complaint",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 2
+              },
+              "score": 73
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "comorbidities": [],
+      "relatedDiagnoses": [],
+      "history": [
+        {
+          "conceptId": "38341003",
+          "term": "Hypertension",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "64572001",
+            "138875005",
+            "49601007",
+            "106063007",
+            "404684003",
+            "366157005",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "hypertension"
+          ],
+          "matchedTerms": [
+            "Hypertension"
+          ],
+          "supportingSections": [
+            "History"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "hypertension",
+                "section": "History",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "44054006",
+          "term": "Type 2 diabetes mellitus",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "75934005",
+            "126877002",
+            "20957000",
+            "64572001",
+            "138875005",
+            "73211009",
+            "404684003",
+            "362969004",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "type 2 diabetes mellitus"
+          ],
+          "matchedTerms": [
+            "Type 2 diabetes mellitus"
+          ],
+          "supportingSections": [
+            "History"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "type 2 diabetes mellitus",
+                "section": "History",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "29857009",
+          "term": "Chest pain",
+          "semanticTag": "finding",
+          "ancestorIds": [
+            "301366005",
+            "276435006",
+            "298705000",
+            "302292003",
+            "102957003",
+            "138875005",
+            "106147001",
+            "699697007",
+            "22253000",
+            "609623002",
+            "404684003",
+            "279001004"
+          ],
+          "kind": "symptom",
+          "encounterPriority": 0,
+          "temporality": "historical",
+          "clinicalStatus": "resolved",
+          "score": 53,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Chest pain"
+          ],
+          "matchedTerms": [
+            "Chest pain"
+          ],
+          "supportingSections": [
+            "Assessment"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "historical"
+          ],
+          "rationale": [
+            "section:Assessment",
+            "semanticTag:finding"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 53,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Chest pain",
+                "section": "Assessment",
+                "assertion": "historical",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": -10,
+                  "evidence": 9,
+                  "semanticTag": 2
+                },
+                "score": 53
+              }
+            ]
+          },
+          "principalEligible": false
+        }
+      ],
+      "suspected": [
+        {
+          "conceptId": "57054005",
+          "term": "Acute myocardial infarction",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "609410002",
+            "22298006",
+            "57809008",
+            "414545008",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "118946009",
+            "48125009",
+            "128121009",
+            "251052000",
+            "733217006",
+            "49601007",
+            "282728007",
+            "609622007",
+            "301122000",
+            "417163006",
+            "298705000",
+            "302292003",
+            "105612003",
+            "2704003",
+            "262525000",
+            "362965005",
+            "301095005",
+            "128487001",
+            "56265001",
+            "128599005",
+            "301296002",
+            "64572001",
+            "413439005",
+            "86175003",
+            "127337006",
+            "138875005",
+            "404684003",
+            "251061000"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "unknown",
+          "score": 87,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Acute myocardial infarction"
+          ],
+          "matchedTerms": [
+            "Acute myocardial infarction"
+          ],
+          "supportingSections": [
+            "Assessment"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "suspected"
+          ],
+          "rationale": [
+            "section:Assessment",
+            "assertion:suspected",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 87,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Acute myocardial infarction",
+                "section": "Assessment",
+                "assertion": "suspected",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 8,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 87
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "4557003",
+          "term": "Unstable angina",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "301366005",
+            "276435006",
+            "414545008",
+            "301358001",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "279001004",
+            "118946009",
+            "48125009",
+            "128121009",
+            "733217006",
+            "699697007",
+            "22253000",
+            "49601007",
+            "282728007",
+            "609622007",
+            "417163006",
+            "298705000",
+            "302292003",
+            "105612003",
+            "102957003",
+            "106147001",
+            "262525000",
+            "362965005",
+            "301095005",
+            "56265001",
+            "29857009",
+            "128599005",
+            "301296002",
+            "64572001",
+            "86175003",
+            "138875005",
+            "194828000",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "unknown",
+          "score": 87,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "possible unstable angina"
+          ],
+          "matchedTerms": [
+            "Unstable angina"
+          ],
+          "supportingSections": [
+            "Assessment"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "suspected"
+          ],
+          "rationale": [
+            "section:Assessment",
+            "assertion:suspected",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 87,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "possible unstable angina",
+                "section": "Assessment",
+                "assertion": "suspected",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 8,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 87
+              }
+            ]
+          },
+          "principalEligible": false
+        }
+      ],
+      "changedPrincipal": false
+    },
+    {
+      "file": "ex-chestpain-es-hybrid.json",
+      "groundingHealthy": true,
+      "capturedDiagnosisPolicy": "source-priority-v4",
+      "capturedPrincipal": {
+        "conceptId": "29857009",
+        "term": "dolor torácico",
+        "semanticTag": "hallazgo",
+        "ancestorIds": [
+          "301366005",
+          "276435006",
+          "298705000",
+          "302292003",
+          "102957003",
+          "138875005",
+          "106147001",
+          "699697007",
+          "22253000",
+          "609623002",
+          "404684003",
+          "279001004"
+        ],
+        "kind": "symptom",
+        "encounterPriority": 3,
+        "temporality": "current",
+        "clinicalStatus": "resolved",
+        "score": 87,
+        "confidencePct": 100,
+        "supportingSpanCount": 2,
+        "supportingSpans": [
+          "Dolor torácico"
+        ],
+        "matchedTerms": [
+          "dolor torácico"
+        ],
+        "supportingSections": [
+          "Motivo de consulta",
+          "Evaluación"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Motivo de consulta",
+          "assertion:present",
+          "semanticTag:hallazgo",
+          "section:Evaluación"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 83,
+          "repeatBonus": 4,
+          "contributions": [
+            {
+              "phrase": "Dolor torácico",
+              "section": "Motivo de consulta",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 2
+              },
+              "score": 73
+            },
+            {
+              "phrase": "Dolor torácico",
+              "section": "Evaluación",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 2
+              },
+              "score": 83
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "principal": {
+        "conceptId": "29857009",
+        "term": "dolor torácico",
+        "semanticTag": "hallazgo",
+        "ancestorIds": [
+          "301366005",
+          "276435006",
+          "298705000",
+          "302292003",
+          "102957003",
+          "138875005",
+          "106147001",
+          "699697007",
+          "22253000",
+          "609623002",
+          "404684003",
+          "279001004"
+        ],
+        "kind": "symptom",
+        "encounterPriority": 3,
+        "temporality": "current",
+        "clinicalStatus": "resolved",
+        "score": 87,
+        "confidencePct": 100,
+        "supportingSpanCount": 2,
+        "supportingSpans": [
+          "Dolor torácico"
+        ],
+        "matchedTerms": [
+          "dolor torácico"
+        ],
+        "supportingSections": [
+          "Motivo de consulta",
+          "Evaluación"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Motivo de consulta",
+          "assertion:present",
+          "semanticTag:hallazgo",
+          "section:Evaluación"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 83,
+          "repeatBonus": 4,
+          "contributions": [
+            {
+              "phrase": "Dolor torácico",
+              "section": "Motivo de consulta",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 2
+              },
+              "score": 73
+            },
+            {
+              "phrase": "Dolor torácico",
+              "section": "Evaluación",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 2
+              },
+              "score": 83
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "comorbidities": [],
+      "relatedDiagnoses": [],
+      "history": [
+        {
+          "conceptId": "44054006",
+          "term": "diabetes mellitus tipo 2",
+          "semanticTag": "trastorno",
+          "ancestorIds": [
+            "75934005",
+            "126877002",
+            "20957000",
+            "64572001",
+            "138875005",
+            "73211009",
+            "404684003",
+            "362969004",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 89,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "diabetes mellitus tipo 2"
+          ],
+          "matchedTerms": [
+            "diabetes mellitus tipo 2"
+          ],
+          "supportingSections": [
+            "Enfermedad actual"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Enfermedad actual",
+            "assertion:present",
+            "semanticTag:trastorno"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 89,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "diabetes mellitus tipo 2",
+                "section": "Enfermedad actual",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 12,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 89
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "38341003",
+          "term": "hipertensión arterial",
+          "semanticTag": "trastorno",
+          "ancestorIds": [
+            "64572001",
+            "138875005",
+            "49601007",
+            "106063007",
+            "404684003",
+            "366157005",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 89,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "hipertensión arterial"
+          ],
+          "matchedTerms": [
+            "hipertensión arterial"
+          ],
+          "supportingSections": [
+            "Enfermedad actual"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Enfermedad actual",
+            "assertion:present",
+            "semanticTag:trastorno"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 89,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "hipertensión arterial",
+                "section": "Enfermedad actual",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 12,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 89
+              }
+            ]
+          },
+          "principalEligible": false
+        }
+      ],
+      "suspected": [
+        {
+          "conceptId": "4557003",
+          "term": "angina inestable",
+          "semanticTag": "trastorno",
+          "ancestorIds": [
+            "301366005",
+            "276435006",
+            "414545008",
+            "301358001",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "279001004",
+            "118946009",
+            "48125009",
+            "128121009",
+            "733217006",
+            "699697007",
+            "22253000",
+            "49601007",
+            "282728007",
+            "609622007",
+            "417163006",
+            "298705000",
+            "302292003",
+            "105612003",
+            "102957003",
+            "106147001",
+            "262525000",
+            "362965005",
+            "301095005",
+            "56265001",
+            "29857009",
+            "128599005",
+            "301296002",
+            "64572001",
+            "86175003",
+            "138875005",
+            "194828000",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "unknown",
+          "score": 87,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "posible angina inestable"
+          ],
+          "matchedTerms": [
+            "angina inestable"
+          ],
+          "supportingSections": [
+            "Evaluación"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "suspected"
+          ],
+          "rationale": [
+            "section:Evaluación",
+            "assertion:suspected",
+            "semanticTag:trastorno"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 87,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "posible angina inestable",
+                "section": "Evaluación",
+                "assertion": "suspected",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 8,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 87
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "57054005",
+          "term": "infarto agudo de miocardio",
+          "semanticTag": "trastorno",
+          "ancestorIds": [
+            "609410002",
+            "22298006",
+            "57809008",
+            "414545008",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "118946009",
+            "48125009",
+            "128121009",
+            "251052000",
+            "733217006",
+            "49601007",
+            "282728007",
+            "609622007",
+            "301122000",
+            "417163006",
+            "298705000",
+            "302292003",
+            "105612003",
+            "2704003",
+            "262525000",
+            "362965005",
+            "301095005",
+            "128487001",
+            "56265001",
+            "128599005",
+            "301296002",
+            "64572001",
+            "413439005",
+            "86175003",
+            "127337006",
+            "138875005",
+            "404684003",
+            "251061000"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "unknown",
+          "score": 87,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Infarto agudo de miocardio no confirmado en este momento"
+          ],
+          "matchedTerms": [
+            "infarto agudo de miocardio"
+          ],
+          "supportingSections": [
+            "Evaluación"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "suspected"
+          ],
+          "rationale": [
+            "section:Evaluación",
+            "assertion:suspected",
+            "semanticTag:trastorno"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 87,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Infarto agudo de miocardio no confirmado en este momento",
+                "section": "Evaluación",
+                "assertion": "suspected",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 8,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 87
+              }
+            ]
+          },
+          "principalEligible": false
+        }
+      ],
+      "changedPrincipal": false
+    },
+    {
+      "file": "ex-diabetes-en-hybrid.json",
+      "groundingHealthy": true,
+      "capturedDiagnosisPolicy": "source-priority-v3",
+      "capturedPrincipal": {
+        "conceptId": "44054006",
+        "term": "Type 2 diabetes mellitus",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "75934005",
+          "126877002",
+          "20957000",
+          "64572001",
+          "138875005",
+          "73211009",
+          "404684003",
+          "362969004",
+          "362965005"
+        ],
+        "kind": "condition",
+        "encounterPriority": 5,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 111,
+        "confidencePct": 100,
+        "supportingSpanCount": 4,
+        "supportingSpans": [
+          "type 2 diabetes mellitus",
+          "Type 2 diabetes mellitus",
+          "diabetes"
+        ],
+        "matchedTerms": [
+          "Type 2 diabetes mellitus"
+        ],
+        "supportingSections": [
+          "Reason for visit",
+          "History of present illness",
+          "Assessment"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Reason for visit",
+          "assertion:present",
+          "semanticTag:disorder",
+          "section:History of present illness",
+          "section:Assessment"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 99,
+          "repeatBonus": 12,
+          "contributions": [
+            {
+              "phrase": "type 2 diabetes mellitus",
+              "section": "Reason for visit",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 89
+            },
+            {
+              "phrase": "type 2 diabetes mellitus",
+              "section": "History of present illness",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 89
+            },
+            {
+              "phrase": "Type 2 diabetes mellitus",
+              "section": "Assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 99
+            },
+            {
+              "phrase": "diabetes",
+              "section": "Assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 99
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "principal": {
+        "conceptId": "44054006",
+        "term": "Type 2 diabetes mellitus",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "75934005",
+          "126877002",
+          "20957000",
+          "64572001",
+          "138875005",
+          "73211009",
+          "404684003",
+          "362969004",
+          "362965005"
+        ],
+        "kind": "condition",
+        "encounterPriority": 5,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 111,
+        "confidencePct": 100,
+        "supportingSpanCount": 4,
+        "supportingSpans": [
+          "type 2 diabetes mellitus",
+          "Type 2 diabetes mellitus",
+          "diabetes"
+        ],
+        "matchedTerms": [
+          "Type 2 diabetes mellitus"
+        ],
+        "supportingSections": [
+          "Reason for visit",
+          "History of present illness",
+          "Assessment"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Reason for visit",
+          "assertion:present",
+          "semanticTag:disorder",
+          "section:History of present illness",
+          "section:Assessment"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 99,
+          "repeatBonus": 12,
+          "contributions": [
+            {
+              "phrase": "type 2 diabetes mellitus",
+              "section": "Reason for visit",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 89
+            },
+            {
+              "phrase": "type 2 diabetes mellitus",
+              "section": "History of present illness",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 89
+            },
+            {
+              "phrase": "Type 2 diabetes mellitus",
+              "section": "Assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 99
+            },
+            {
+              "phrase": "diabetes",
+              "section": "Assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 99
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "comorbidities": [
+        {
+          "conceptId": "38341003",
+          "term": "Hypertension",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "64572001",
+            "138875005",
+            "49601007",
+            "106063007",
+            "404684003",
+            "366157005",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 99,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Hypertension"
+          ],
+          "matchedTerms": [
+            "Hypertension"
+          ],
+          "supportingSections": [
+            "Assessment"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Assessment",
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 99,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Hypertension",
+                "section": "Assessment",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 99
+              }
+            ]
+          },
+          "principalEligible": true
+        }
+      ],
+      "relatedDiagnoses": [],
+      "history": [
+        {
+          "conceptId": "55822004",
+          "term": "Hyperlipidemia",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "238037008",
+            "166818002",
+            "118245000",
+            "442756004",
+            "441742003",
+            "127325009",
+            "365791005",
+            "48286001",
+            "75934005",
+            "785671009",
+            "124042003",
+            "64572001",
+            "138875005",
+            "442096005",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Hyperlipidemia"
+          ],
+          "matchedTerms": [
+            "Hyperlipidemia"
+          ],
+          "supportingSections": [
+            "Past medical history"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Hyperlipidemia",
+                "section": "Past medical history",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        }
+      ],
+      "suspected": [
+        {
+          "conceptId": "127013003",
+          "term": "Diabetic nephropathy",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "49698005",
+            "106098005",
+            "302292003",
+            "74627003",
+            "90708001",
+            "406123005",
+            "734045002",
+            "822988000",
+            "362965005",
+            "822987005",
+            "42030000",
+            "118948005",
+            "128121009",
+            "443820000",
+            "249578005",
+            "249561001",
+            "64572001",
+            "128606002",
+            "138875005",
+            "118238000",
+            "404684003",
+            "609624008"
+          ],
+          "kind": "condition",
+          "encounterPriority": 4,
+          "temporality": "current",
+          "clinicalStatus": "unknown",
+          "score": 87,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "suspected diabetic nephropathy"
+          ],
+          "matchedTerms": [
+            "Diabetic nephropathy"
+          ],
+          "supportingSections": [
+            "Assessment"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "suspected"
+          ],
+          "rationale": [
+            "section:Assessment",
+            "assertion:suspected",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 87,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "suspected diabetic nephropathy",
+                "section": "Assessment",
+                "assertion": "suspected",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 8,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 87
+              }
+            ]
+          },
+          "principalEligible": false
+        }
+      ],
+      "changedPrincipal": false
+    },
+    {
+      "file": "ex-diabetes-es-hybrid.json",
+      "groundingHealthy": true,
+      "capturedDiagnosisPolicy": "source-priority-v3",
+      "capturedPrincipal": {
+        "conceptId": "44054006",
+        "term": "diabetes mellitus tipo 2",
+        "semanticTag": "trastorno",
+        "ancestorIds": [
+          "75934005",
+          "126877002",
+          "20957000",
+          "64572001",
+          "138875005",
+          "73211009",
+          "404684003",
+          "362969004",
+          "362965005"
+        ],
+        "kind": "condition",
+        "encounterPriority": 5,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 107,
+        "confidencePct": 100,
+        "supportingSpanCount": 3,
+        "supportingSpans": [
+          "diabetes mellitus tipo 2",
+          "Diabetes mellitus tipo 2"
+        ],
+        "matchedTerms": [
+          "diabetes mellitus tipo 2"
+        ],
+        "supportingSections": [
+          "Motivo de consulta",
+          "Enfermedad actual",
+          "Evaluación"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Motivo de consulta",
+          "assertion:present",
+          "semanticTag:trastorno",
+          "section:Enfermedad actual",
+          "section:Evaluación"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 99,
+          "repeatBonus": 8,
+          "contributions": [
+            {
+              "phrase": "diabetes mellitus tipo 2",
+              "section": "Motivo de consulta",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 89
+            },
+            {
+              "phrase": "diabetes mellitus tipo 2",
+              "section": "Enfermedad actual",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 89
+            },
+            {
+              "phrase": "Diabetes mellitus tipo 2",
+              "section": "Evaluación",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 99
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "principal": {
+        "conceptId": "44054006",
+        "term": "diabetes mellitus tipo 2",
+        "semanticTag": "trastorno",
+        "ancestorIds": [
+          "75934005",
+          "126877002",
+          "20957000",
+          "64572001",
+          "138875005",
+          "73211009",
+          "404684003",
+          "362969004",
+          "362965005"
+        ],
+        "kind": "condition",
+        "encounterPriority": 5,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 107,
+        "confidencePct": 100,
+        "supportingSpanCount": 3,
+        "supportingSpans": [
+          "diabetes mellitus tipo 2",
+          "Diabetes mellitus tipo 2"
+        ],
+        "matchedTerms": [
+          "diabetes mellitus tipo 2"
+        ],
+        "supportingSections": [
+          "Motivo de consulta",
+          "Enfermedad actual",
+          "Evaluación"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Motivo de consulta",
+          "assertion:present",
+          "semanticTag:trastorno",
+          "section:Enfermedad actual",
+          "section:Evaluación"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 99,
+          "repeatBonus": 8,
+          "contributions": [
+            {
+              "phrase": "diabetes mellitus tipo 2",
+              "section": "Motivo de consulta",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 89
+            },
+            {
+              "phrase": "diabetes mellitus tipo 2",
+              "section": "Enfermedad actual",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 89
+            },
+            {
+              "phrase": "Diabetes mellitus tipo 2",
+              "section": "Evaluación",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 99
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "comorbidities": [
+        {
+          "conceptId": "38341003",
+          "term": "hipertensión arterial",
+          "semanticTag": "trastorno",
+          "ancestorIds": [
+            "64572001",
+            "138875005",
+            "49601007",
+            "106063007",
+            "404684003",
+            "366157005",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 99,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Hipertensión arterial controlada"
+          ],
+          "matchedTerms": [
+            "hipertensión arterial"
+          ],
+          "supportingSections": [
+            "Evaluación"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Evaluación",
+            "assertion:present",
+            "semanticTag:trastorno"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 99,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Hipertensión arterial controlada",
+                "section": "Evaluación",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 99
+              }
+            ]
+          },
+          "principalEligible": true
+        }
+      ],
+      "relatedDiagnoses": [],
+      "history": [
+        {
+          "conceptId": "370992007",
+          "term": "dislipemia",
+          "semanticTag": "trastorno",
+          "ancestorIds": [
+            "48286001",
+            "75934005",
+            "64572001",
+            "138875005",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Dislipemia"
+          ],
+          "matchedTerms": [
+            "dislipemia"
+          ],
+          "supportingSections": [
+            "Antecedentes personales"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:trastorno"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Dislipemia",
+                "section": "Antecedentes personales",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        }
+      ],
+      "suspected": [
+        {
+          "conceptId": "127013003",
+          "term": "nefropatía diabética",
+          "semanticTag": "trastorno",
+          "ancestorIds": [
+            "49698005",
+            "106098005",
+            "302292003",
+            "74627003",
+            "90708001",
+            "406123005",
+            "734045002",
+            "822988000",
+            "362965005",
+            "822987005",
+            "42030000",
+            "118948005",
+            "128121009",
+            "443820000",
+            "249578005",
+            "249561001",
+            "64572001",
+            "128606002",
+            "138875005",
+            "118238000",
+            "404684003",
+            "609624008"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "unknown",
+          "score": 87,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "nefropatía diabética"
+          ],
+          "matchedTerms": [
+            "nefropatía diabética"
+          ],
+          "supportingSections": [
+            "Evaluación"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "suspected"
+          ],
+          "rationale": [
+            "section:Evaluación",
+            "assertion:suspected",
+            "semanticTag:trastorno"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 87,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "nefropatía diabética",
+                "section": "Evaluación",
+                "assertion": "suspected",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 8,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 87
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "424736006",
+          "term": "neuropatía periférica diabética",
+          "semanticTag": "trastorno",
+          "ancestorIds": [
+            "74627003",
+            "386033004",
+            "19660004",
+            "362965005",
+            "422088007",
+            "710360007",
+            "42658009",
+            "238981002",
+            "118940003",
+            "302226006",
+            "64572001",
+            "1153623003",
+            "138875005",
+            "246605000",
+            "248402002",
+            "230572002",
+            "404684003",
+            "230571009"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "unknown",
+          "score": 87,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "neuropatía periférica diabética"
+          ],
+          "matchedTerms": [
+            "neuropatía periférica diabética"
+          ],
+          "supportingSections": [
+            "Evaluación"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "suspected"
+          ],
+          "rationale": [
+            "section:Evaluación",
+            "assertion:suspected",
+            "semanticTag:trastorno"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 87,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "neuropatía periférica diabética",
+                "section": "Evaluación",
+                "assertion": "suspected",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 8,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 87
+              }
+            ]
+          },
+          "principalEligible": false
+        }
+      ],
+      "changedPrincipal": false
+    },
+    {
+      "file": "ex-full-report-en-hybrid.json",
+      "groundingHealthy": true,
+      "capturedDiagnosisPolicy": "source-priority-v4",
+      "capturedPrincipal": {
+        "conceptId": "443253003",
+        "term": "Acute on chronic systolic heart failure (disorder)",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "417996009",
+          "128292002",
+          "1296659009",
+          "49483002",
+          "406123005",
+          "609623002",
+          "106063007",
+          "118946009",
+          "371037005",
+          "443254009",
+          "128121009",
+          "84114007",
+          "128238001",
+          "105981003",
+          "49601007",
+          "56675007",
+          "609622007",
+          "298705000",
+          "27624003",
+          "301458000",
+          "302292003",
+          "118228005",
+          "2704003",
+          "362965005",
+          "301095005",
+          "128487001",
+          "56265001",
+          "733741005",
+          "301296002",
+          "64572001",
+          "48447003",
+          "127337006",
+          "138875005",
+          "441481004",
+          "111970001",
+          "404684003"
+        ],
+        "kind": "condition",
+        "encounterPriority": 5,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 88.4,
+        "confidencePct": 98,
+        "supportingSpanCount": 1,
+        "supportingSpans": [
+          "acute decompensated heart failure"
+        ],
+        "matchedTerms": [
+          "Acute on chronic systolic heart failure (disorder)"
+        ],
+        "supportingSections": [
+          "History of present illness"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:History of present illness",
+          "assertion:present",
+          "semanticTag:disorder"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 88.4,
+          "repeatBonus": 0,
+          "contributions": [
+            {
+              "phrase": "acute decompensated heart failure",
+              "section": "History of present illness",
+              "assertion": "present",
+              "parts": {
+                "confidence": 29.4,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 88.4
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "principal": {
+        "conceptId": "443253003",
+        "term": "Acute on chronic systolic heart failure (disorder)",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "417996009",
+          "128292002",
+          "1296659009",
+          "49483002",
+          "406123005",
+          "609623002",
+          "106063007",
+          "118946009",
+          "371037005",
+          "443254009",
+          "128121009",
+          "84114007",
+          "128238001",
+          "105981003",
+          "49601007",
+          "56675007",
+          "609622007",
+          "298705000",
+          "27624003",
+          "301458000",
+          "302292003",
+          "118228005",
+          "2704003",
+          "362965005",
+          "301095005",
+          "128487001",
+          "56265001",
+          "733741005",
+          "301296002",
+          "64572001",
+          "48447003",
+          "127337006",
+          "138875005",
+          "441481004",
+          "111970001",
+          "404684003"
+        ],
+        "kind": "condition",
+        "encounterPriority": 5,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 88.4,
+        "confidencePct": 98,
+        "supportingSpanCount": 1,
+        "supportingSpans": [
+          "acute decompensated heart failure"
+        ],
+        "matchedTerms": [
+          "Acute on chronic systolic heart failure (disorder)"
+        ],
+        "supportingSections": [
+          "History of present illness"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:History of present illness",
+          "assertion:present",
+          "semanticTag:disorder"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 88.4,
+          "repeatBonus": 0,
+          "contributions": [
+            {
+              "phrase": "acute decompensated heart failure",
+              "section": "History of present illness",
+              "assertion": "present",
+              "parts": {
+                "confidence": 29.4,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 88.4
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "comorbidities": [
+        {
+          "conceptId": "49436004",
+          "term": "Atrial fibrillation",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "698247007",
+            "106066004",
+            "40593004",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "118946009",
+            "128121009",
+            "6285003",
+            "49601007",
+            "301113001",
+            "366157005",
+            "609622007",
+            "6456007",
+            "298705000",
+            "72654001",
+            "302292003",
+            "362965005",
+            "301095005",
+            "17366009",
+            "56265001",
+            "301296002",
+            "64572001",
+            "138875005",
+            "870575001",
+            "3424008",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 99,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Atrial fibrillation"
+          ],
+          "matchedTerms": [
+            "Atrial fibrillation"
+          ],
+          "supportingSections": [
+            "Discharge diagnoses"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Discharge diagnoses",
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 99,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Atrial fibrillation",
+                "section": "Discharge diagnoses",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 99
+              }
+            ]
+          },
+          "principalEligible": true
+        },
+        {
+          "conceptId": "709044004",
+          "term": "Chronic kidney disease",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "1148582006",
+            "106098005",
+            "90708001",
+            "406123005",
+            "734045002",
+            "236423003",
+            "128121009",
+            "443820000",
+            "128606002",
+            "609624008",
+            "27624003",
+            "302292003",
+            "118228005",
+            "822988000",
+            "1156448003",
+            "362965005",
+            "128290005",
+            "822987005",
+            "42030000",
+            "118948005",
+            "249578005",
+            "249561001",
+            "64572001",
+            "138875005",
+            "118238000",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 99,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Chronic kidney disease"
+          ],
+          "matchedTerms": [
+            "Chronic kidney disease"
+          ],
+          "supportingSections": [
+            "Discharge diagnoses"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Discharge diagnoses",
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 99,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Chronic kidney disease",
+                "section": "Discharge diagnoses",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 99
+              }
+            ]
+          },
+          "principalEligible": true
+        },
+        {
+          "conceptId": "53741008",
+          "term": "Coronary artery disease",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "21829004",
+            "362975008",
+            "301139003",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "118946009",
+            "19660004",
+            "128121009",
+            "49601007",
+            "248402002",
+            "27550009",
+            "609622007",
+            "414024009",
+            "896818001",
+            "298705000",
+            "280871000",
+            "302292003",
+            "359557001",
+            "248718009",
+            "72092001",
+            "251015000",
+            "362965005",
+            "301095005",
+            "56265001",
+            "128599005",
+            "301296002",
+            "64572001",
+            "138875005",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 99,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Coronary artery disease"
+          ],
+          "matchedTerms": [
+            "Coronary artery disease"
+          ],
+          "supportingSections": [
+            "Discharge diagnoses"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Discharge diagnoses",
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 99,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Coronary artery disease",
+                "section": "Discharge diagnoses",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 99
+              }
+            ]
+          },
+          "principalEligible": true
+        },
+        {
+          "conceptId": "44054006",
+          "term": "Type 2 diabetes mellitus",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "75934005",
+            "126877002",
+            "20957000",
+            "64572001",
+            "138875005",
+            "73211009",
+            "404684003",
+            "362969004",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 99,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Type 2 diabetes mellitus"
+          ],
+          "matchedTerms": [
+            "Type 2 diabetes mellitus"
+          ],
+          "supportingSections": [
+            "Discharge diagnoses"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Discharge diagnoses",
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 99,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Type 2 diabetes mellitus",
+                "section": "Discharge diagnoses",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 99
+              }
+            ]
+          },
+          "principalEligible": true
+        },
+        {
+          "conceptId": "414545008",
+          "term": "Ischemic heart disease",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "118946009",
+            "48125009",
+            "128121009",
+            "733217006",
+            "49601007",
+            "282728007",
+            "609622007",
+            "417163006",
+            "298705000",
+            "302292003",
+            "105612003",
+            "262525000",
+            "362965005",
+            "301095005",
+            "56265001",
+            "128599005",
+            "301296002",
+            "64572001",
+            "86175003",
+            "138875005",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 89,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "ischemic heart disease"
+          ],
+          "matchedTerms": [
+            "Ischemic heart disease"
+          ],
+          "supportingSections": [
+            "History of present illness"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:History of present illness",
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 89,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "ischemic heart disease",
+                "section": "History of present illness",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 12,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 89
+              }
+            ]
+          },
+          "principalEligible": true
+        }
+      ],
+      "relatedDiagnoses": [],
+      "history": [
+        {
+          "conceptId": "709044004",
+          "term": "Chronic kidney disease",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "1148582006",
+            "106098005",
+            "90708001",
+            "406123005",
+            "734045002",
+            "236423003",
+            "128121009",
+            "443820000",
+            "128606002",
+            "609624008",
+            "27624003",
+            "302292003",
+            "118228005",
+            "822988000",
+            "1156448003",
+            "362965005",
+            "128290005",
+            "822987005",
+            "42030000",
+            "118948005",
+            "249578005",
+            "249561001",
+            "64572001",
+            "138875005",
+            "118238000",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "chronic kidney disease"
+          ],
+          "matchedTerms": [
+            "Chronic kidney disease"
+          ],
+          "supportingSections": [
+            "Past medical history"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "chronic kidney disease",
+                "section": "Past medical history",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "53741008",
+          "term": "Coronary artery disease",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "21829004",
+            "362975008",
+            "301139003",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "118946009",
+            "19660004",
+            "128121009",
+            "49601007",
+            "248402002",
+            "27550009",
+            "609622007",
+            "414024009",
+            "896818001",
+            "298705000",
+            "280871000",
+            "302292003",
+            "359557001",
+            "248718009",
+            "72092001",
+            "251015000",
+            "362965005",
+            "301095005",
+            "56265001",
+            "128599005",
+            "301296002",
+            "64572001",
+            "138875005",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "coronary artery disease"
+          ],
+          "matchedTerms": [
+            "Coronary artery disease"
+          ],
+          "supportingSections": [
+            "Past medical history"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "coronary artery disease",
+                "section": "Past medical history",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "59621000",
+          "term": "Essential hypertension",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "38341003",
+            "64572001",
+            "138875005",
+            "49601007",
+            "106063007",
+            "404684003",
+            "366157005",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "essential hypertension"
+          ],
+          "matchedTerms": [
+            "Essential hypertension"
+          ],
+          "supportingSections": [
+            "Past medical history"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "essential hypertension",
+                "section": "Past medical history",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "44054006",
+          "term": "Type 2 diabetes mellitus",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "75934005",
+            "126877002",
+            "20957000",
+            "64572001",
+            "138875005",
+            "73211009",
+            "404684003",
+            "362969004",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "type 2 diabetes mellitus"
+          ],
+          "matchedTerms": [
+            "Type 2 diabetes mellitus"
+          ],
+          "supportingSections": [
+            "Past medical history"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "type 2 diabetes mellitus",
+                "section": "Past medical history",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        }
+      ],
+      "suspected": [],
+      "changedPrincipal": false
+    },
+    {
+      "file": "ex-hf-en-hybrid.json",
+      "groundingHealthy": true,
+      "capturedDiagnosisPolicy": "source-priority-v4",
+      "capturedPrincipal": {
+        "conceptId": "443253003",
+        "term": "Acute on chronic systolic heart failure",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "417996009",
+          "128292002",
+          "1296659009",
+          "49483002",
+          "406123005",
+          "609623002",
+          "106063007",
+          "118946009",
+          "371037005",
+          "443254009",
+          "128121009",
+          "84114007",
+          "128238001",
+          "105981003",
+          "49601007",
+          "56675007",
+          "609622007",
+          "298705000",
+          "27624003",
+          "301458000",
+          "302292003",
+          "118228005",
+          "2704003",
+          "362965005",
+          "301095005",
+          "128487001",
+          "56265001",
+          "733741005",
+          "301296002",
+          "64572001",
+          "48447003",
+          "127337006",
+          "138875005",
+          "441481004",
+          "111970001",
+          "404684003"
+        ],
+        "kind": "condition",
+        "encounterPriority": 4,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 73,
+        "confidencePct": 0,
+        "supportingSpanCount": 2,
+        "supportingSpans": [
+          "Acute decompensated heart failure",
+          "chronic heart failure with reduced ejection fraction"
+        ],
+        "matchedTerms": [
+          "Acute on chronic systolic heart failure"
+        ],
+        "supportingSections": [
+          "Discharge assessment"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Discharge assessment",
+          "assertion:present",
+          "semanticTag:disorder"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 69,
+          "repeatBonus": 4,
+          "contributions": [
+            {
+              "phrase": "Acute decompensated heart failure",
+              "section": "Discharge assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 0,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 69
+            },
+            {
+              "phrase": "chronic heart failure with reduced ejection fraction",
+              "section": "Discharge assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 0,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 69
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "principal": {
+        "conceptId": "443253003",
+        "term": "Acute on chronic systolic heart failure",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "417996009",
+          "128292002",
+          "1296659009",
+          "49483002",
+          "406123005",
+          "609623002",
+          "106063007",
+          "118946009",
+          "371037005",
+          "443254009",
+          "128121009",
+          "84114007",
+          "128238001",
+          "105981003",
+          "49601007",
+          "56675007",
+          "609622007",
+          "298705000",
+          "27624003",
+          "301458000",
+          "302292003",
+          "118228005",
+          "2704003",
+          "362965005",
+          "301095005",
+          "128487001",
+          "56265001",
+          "733741005",
+          "301296002",
+          "64572001",
+          "48447003",
+          "127337006",
+          "138875005",
+          "441481004",
+          "111970001",
+          "404684003"
+        ],
+        "kind": "condition",
+        "encounterPriority": 4,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 73,
+        "confidencePct": 0,
+        "supportingSpanCount": 2,
+        "supportingSpans": [
+          "Acute decompensated heart failure",
+          "chronic heart failure with reduced ejection fraction"
+        ],
+        "matchedTerms": [
+          "Acute on chronic systolic heart failure"
+        ],
+        "supportingSections": [
+          "Discharge assessment"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Discharge assessment",
+          "assertion:present",
+          "semanticTag:disorder"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 69,
+          "repeatBonus": 4,
+          "contributions": [
+            {
+              "phrase": "Acute decompensated heart failure",
+              "section": "Discharge assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 0,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 69
+            },
+            {
+              "phrase": "chronic heart failure with reduced ejection fraction",
+              "section": "Discharge assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 0,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 69
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "comorbidities": [
+        {
+          "conceptId": "49436004",
+          "term": "Atrial fibrillation",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "698247007",
+            "106066004",
+            "40593004",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "118946009",
+            "128121009",
+            "6285003",
+            "49601007",
+            "301113001",
+            "366157005",
+            "609622007",
+            "6456007",
+            "298705000",
+            "72654001",
+            "302292003",
+            "362965005",
+            "301095005",
+            "17366009",
+            "56265001",
+            "301296002",
+            "64572001",
+            "138875005",
+            "870575001",
+            "3424008",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 103,
+          "confidencePct": 100,
+          "supportingSpanCount": 2,
+          "supportingSpans": [
+            "Atrial fibrillation",
+            "Atrial fibrillation, rate controlled"
+          ],
+          "matchedTerms": [
+            "Atrial fibrillation"
+          ],
+          "supportingSections": [
+            "Hospital course",
+            "Discharge assessment"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Hospital course",
+            "assertion:present",
+            "semanticTag:disorder",
+            "section:Discharge assessment"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 99,
+            "repeatBonus": 4,
+            "contributions": [
+              {
+                "phrase": "Atrial fibrillation",
+                "section": "Hospital course",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 2,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 79
+              },
+              {
+                "phrase": "Atrial fibrillation, rate controlled",
+                "section": "Discharge assessment",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 99
+              }
+            ]
+          },
+          "principalEligible": true
+        },
+        {
+          "conceptId": "433144002",
+          "term": "Chronic kidney disease stage 3",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "1148582006",
+            "106098005",
+            "90708001",
+            "406123005",
+            "734045002",
+            "236423003",
+            "128121009",
+            "443820000",
+            "128606002",
+            "609624008",
+            "27624003",
+            "709044004",
+            "302292003",
+            "118228005",
+            "822988000",
+            "1156448003",
+            "362965005",
+            "128290005",
+            "822987005",
+            "42030000",
+            "118948005",
+            "249578005",
+            "249561001",
+            "64572001",
+            "138875005",
+            "118238000",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 99,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Chronic kidney disease stage 3"
+          ],
+          "matchedTerms": [
+            "Chronic kidney disease stage 3"
+          ],
+          "supportingSections": [
+            "Discharge assessment"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Discharge assessment",
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 99,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Chronic kidney disease stage 3",
+                "section": "Discharge assessment",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 99
+              }
+            ]
+          },
+          "principalEligible": true
+        },
+        {
+          "conceptId": "38341003",
+          "term": "Hypertension",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "64572001",
+            "138875005",
+            "49601007",
+            "106063007",
+            "404684003",
+            "366157005",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 99,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Hypertension"
+          ],
+          "matchedTerms": [
+            "Hypertension"
+          ],
+          "supportingSections": [
+            "Discharge assessment"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Discharge assessment",
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 99,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Hypertension",
+                "section": "Discharge assessment",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 99
+              }
+            ]
+          },
+          "principalEligible": true
+        }
+      ],
+      "relatedDiagnoses": [],
+      "history": [
+        {
+          "conceptId": "267039000",
+          "term": "Ankle swelling",
+          "semanticTag": "finding",
+          "ancestorIds": [
+            "116315007",
+            "302293008",
+            "449614009",
+            "65124004",
+            "300872008",
+            "300888008",
+            "419518009",
+            "138875005",
+            "116312005",
+            "80068009",
+            "404684003"
+          ],
+          "kind": "symptom",
+          "encounterPriority": 3,
+          "temporality": "historical",
+          "clinicalStatus": "unknown",
+          "score": 43,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "ankle swelling"
+          ],
+          "matchedTerms": [
+            "Ankle swelling"
+          ],
+          "supportingSections": [
+            "Reason for admission"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "historical"
+          ],
+          "rationale": [
+            "section:Reason for admission",
+            "semanticTag:finding"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 43,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "ankle swelling",
+                "section": "Reason for admission",
+                "assertion": "historical",
+                "parts": {
+                  "confidence": 30,
+                  "section": 12,
+                  "assertion": -10,
+                  "evidence": 9,
+                  "semanticTag": 2
+                },
+                "score": 43
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "49436004",
+          "term": "Atrial fibrillation",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "698247007",
+            "106066004",
+            "40593004",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "118946009",
+            "128121009",
+            "6285003",
+            "49601007",
+            "301113001",
+            "366157005",
+            "609622007",
+            "6456007",
+            "298705000",
+            "72654001",
+            "302292003",
+            "362965005",
+            "301095005",
+            "17366009",
+            "56265001",
+            "301296002",
+            "64572001",
+            "138875005",
+            "870575001",
+            "3424008",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "atrial fibrillation"
+          ],
+          "matchedTerms": [
+            "Atrial fibrillation"
+          ],
+          "supportingSections": [
+            "Past medical history"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "atrial fibrillation",
+                "section": "Past medical history",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "433144002",
+          "term": "Chronic kidney disease stage 3",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "1148582006",
+            "106098005",
+            "90708001",
+            "406123005",
+            "734045002",
+            "236423003",
+            "128121009",
+            "443820000",
+            "128606002",
+            "609624008",
+            "27624003",
+            "709044004",
+            "302292003",
+            "118228005",
+            "822988000",
+            "1156448003",
+            "362965005",
+            "128290005",
+            "822987005",
+            "42030000",
+            "118948005",
+            "249578005",
+            "249561001",
+            "64572001",
+            "138875005",
+            "118238000",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "chronic kidney disease stage 3"
+          ],
+          "matchedTerms": [
+            "Chronic kidney disease stage 3"
+          ],
+          "supportingSections": [
+            "Past medical history"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "chronic kidney disease stage 3",
+                "section": "Past medical history",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "38341003",
+          "term": "Hypertension",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "64572001",
+            "138875005",
+            "49601007",
+            "106063007",
+            "404684003",
+            "366157005",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "hypertension"
+          ],
+          "matchedTerms": [
+            "Hypertension"
+          ],
+          "supportingSections": [
+            "Past medical history"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "hypertension",
+                "section": "Past medical history",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        }
+      ],
+      "suspected": [],
+      "changedPrincipal": false
+    },
+    {
+      "file": "ex-hf-es-hybrid.json",
+      "groundingHealthy": true,
+      "capturedDiagnosisPolicy": "source-priority-v4",
+      "capturedPrincipal": {
+        "conceptId": "443253003",
+        "term": "insuficiencia cardíaca sistólica crónica reagudizada",
+        "semanticTag": "trastorno",
+        "ancestorIds": [
+          "417996009",
+          "128292002",
+          "1296659009",
+          "49483002",
+          "406123005",
+          "609623002",
+          "106063007",
+          "118946009",
+          "371037005",
+          "443254009",
+          "128121009",
+          "84114007",
+          "128238001",
+          "105981003",
+          "49601007",
+          "56675007",
+          "609622007",
+          "298705000",
+          "27624003",
+          "301458000",
+          "302292003",
+          "118228005",
+          "2704003",
+          "362965005",
+          "301095005",
+          "128487001",
+          "56265001",
+          "733741005",
+          "301296002",
+          "64572001",
+          "48447003",
+          "127337006",
+          "138875005",
+          "441481004",
+          "111970001",
+          "404684003"
+        ],
+        "kind": "condition",
+        "encounterPriority": 4,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 73,
+        "confidencePct": 0,
+        "supportingSpanCount": 2,
+        "supportingSpans": [
+          "Insuficiencia cardíaca aguda descompensada",
+          "insuficiencia cardíaca crónica con fracción de eyección reducida"
+        ],
+        "matchedTerms": [
+          "insuficiencia cardíaca sistólica crónica reagudizada"
+        ],
+        "supportingSections": [
+          "Diagnóstico al alta"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Diagnóstico al alta",
+          "assertion:present",
+          "semanticTag:trastorno"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 69,
+          "repeatBonus": 4,
+          "contributions": [
+            {
+              "phrase": "Insuficiencia cardíaca aguda descompensada",
+              "section": "Diagnóstico al alta",
+              "assertion": "present",
+              "parts": {
+                "confidence": 0,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 69
+            },
+            {
+              "phrase": "insuficiencia cardíaca crónica con fracción de eyección reducida",
+              "section": "Diagnóstico al alta",
+              "assertion": "present",
+              "parts": {
+                "confidence": 0,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 69
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "principal": {
+        "conceptId": "443253003",
+        "term": "insuficiencia cardíaca sistólica crónica reagudizada",
+        "semanticTag": "trastorno",
+        "ancestorIds": [
+          "417996009",
+          "128292002",
+          "1296659009",
+          "49483002",
+          "406123005",
+          "609623002",
+          "106063007",
+          "118946009",
+          "371037005",
+          "443254009",
+          "128121009",
+          "84114007",
+          "128238001",
+          "105981003",
+          "49601007",
+          "56675007",
+          "609622007",
+          "298705000",
+          "27624003",
+          "301458000",
+          "302292003",
+          "118228005",
+          "2704003",
+          "362965005",
+          "301095005",
+          "128487001",
+          "56265001",
+          "733741005",
+          "301296002",
+          "64572001",
+          "48447003",
+          "127337006",
+          "138875005",
+          "441481004",
+          "111970001",
+          "404684003"
+        ],
+        "kind": "condition",
+        "encounterPriority": 4,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 73,
+        "confidencePct": 0,
+        "supportingSpanCount": 2,
+        "supportingSpans": [
+          "Insuficiencia cardíaca aguda descompensada",
+          "insuficiencia cardíaca crónica con fracción de eyección reducida"
+        ],
+        "matchedTerms": [
+          "insuficiencia cardíaca sistólica crónica reagudizada"
+        ],
+        "supportingSections": [
+          "Diagnóstico al alta"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Diagnóstico al alta",
+          "assertion:present",
+          "semanticTag:trastorno"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 69,
+          "repeatBonus": 4,
+          "contributions": [
+            {
+              "phrase": "Insuficiencia cardíaca aguda descompensada",
+              "section": "Diagnóstico al alta",
+              "assertion": "present",
+              "parts": {
+                "confidence": 0,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 69
+            },
+            {
+              "phrase": "insuficiencia cardíaca crónica con fracción de eyección reducida",
+              "section": "Diagnóstico al alta",
+              "assertion": "present",
+              "parts": {
+                "confidence": 0,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 69
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "comorbidities": [
+        {
+          "conceptId": "433144002",
+          "term": "enfermedad renal crónica, estadio 3",
+          "semanticTag": "trastorno",
+          "ancestorIds": [
+            "1148582006",
+            "106098005",
+            "90708001",
+            "406123005",
+            "734045002",
+            "236423003",
+            "128121009",
+            "443820000",
+            "128606002",
+            "609624008",
+            "27624003",
+            "709044004",
+            "302292003",
+            "118228005",
+            "822988000",
+            "1156448003",
+            "362965005",
+            "128290005",
+            "822987005",
+            "42030000",
+            "118948005",
+            "249578005",
+            "249561001",
+            "64572001",
+            "138875005",
+            "118238000",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 99,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Enfermedad renal crónica estadio 3"
+          ],
+          "matchedTerms": [
+            "enfermedad renal crónica, estadio 3"
+          ],
+          "supportingSections": [
+            "Diagnóstico al alta"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Diagnóstico al alta",
+            "assertion:present",
+            "semanticTag:trastorno"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 99,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Enfermedad renal crónica estadio 3",
+                "section": "Diagnóstico al alta",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 99
+              }
+            ]
+          },
+          "principalEligible": true
+        },
+        {
+          "conceptId": "38341003",
+          "term": "hipertensión arterial",
+          "semanticTag": "trastorno",
+          "ancestorIds": [
+            "64572001",
+            "138875005",
+            "49601007",
+            "106063007",
+            "404684003",
+            "366157005",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 99,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Hipertensión arterial"
+          ],
+          "matchedTerms": [
+            "hipertensión arterial"
+          ],
+          "supportingSections": [
+            "Diagnóstico al alta"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Diagnóstico al alta",
+            "assertion:present",
+            "semanticTag:trastorno"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 99,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Hipertensión arterial",
+                "section": "Diagnóstico al alta",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 99
+              }
+            ]
+          },
+          "principalEligible": true
+        },
+        {
+          "conceptId": "300996004",
+          "term": "fibrilación auricular controlada",
+          "semanticTag": "trastorno",
+          "ancestorIds": [
+            "698247007",
+            "106066004",
+            "40593004",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "118946009",
+            "128121009",
+            "6285003",
+            "49436004",
+            "49601007",
+            "301113001",
+            "366157005",
+            "609622007",
+            "6456007",
+            "298705000",
+            "72654001",
+            "302292003",
+            "362965005",
+            "301095005",
+            "17366009",
+            "56265001",
+            "301296002",
+            "64572001",
+            "138875005",
+            "870575001",
+            "3424008",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 69,
+          "confidencePct": 0,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Fibrilación auricular con frecuencia controlada"
+          ],
+          "matchedTerms": [
+            "fibrilación auricular controlada"
+          ],
+          "supportingSections": [
+            "Diagnóstico al alta"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Diagnóstico al alta",
+            "assertion:present",
+            "semanticTag:trastorno"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Fibrilación auricular con frecuencia controlada",
+                "section": "Diagnóstico al alta",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 0,
+                  "section": 22,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": true
+        }
+      ],
+      "relatedDiagnoses": [],
+      "history": [
+        {
+          "conceptId": "433144002",
+          "term": "enfermedad renal crónica, estadio 3",
+          "semanticTag": "trastorno",
+          "ancestorIds": [
+            "1148582006",
+            "106098005",
+            "90708001",
+            "406123005",
+            "734045002",
+            "236423003",
+            "128121009",
+            "443820000",
+            "128606002",
+            "609624008",
+            "27624003",
+            "709044004",
+            "302292003",
+            "118228005",
+            "822988000",
+            "1156448003",
+            "362965005",
+            "128290005",
+            "822987005",
+            "42030000",
+            "118948005",
+            "249578005",
+            "249561001",
+            "64572001",
+            "138875005",
+            "118238000",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "enfermedad renal crónica estadio 3"
+          ],
+          "matchedTerms": [
+            "enfermedad renal crónica, estadio 3"
+          ],
+          "supportingSections": [
+            "Antecedentes personales"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:trastorno"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "enfermedad renal crónica estadio 3",
+                "section": "Antecedentes personales",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "49436004",
+          "term": "fibrilación auricular",
+          "semanticTag": "trastorno",
+          "ancestorIds": [
+            "698247007",
+            "106066004",
+            "40593004",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "118946009",
+            "128121009",
+            "6285003",
+            "49601007",
+            "301113001",
+            "366157005",
+            "609622007",
+            "6456007",
+            "298705000",
+            "72654001",
+            "302292003",
+            "362965005",
+            "301095005",
+            "17366009",
+            "56265001",
+            "301296002",
+            "64572001",
+            "138875005",
+            "870575001",
+            "3424008",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "fibrilación auricular"
+          ],
+          "matchedTerms": [
+            "fibrilación auricular"
+          ],
+          "supportingSections": [
+            "Antecedentes personales"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:trastorno"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "fibrilación auricular",
+                "section": "Antecedentes personales",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "38341003",
+          "term": "hipertensión arterial",
+          "semanticTag": "trastorno",
+          "ancestorIds": [
+            "64572001",
+            "138875005",
+            "49601007",
+            "106063007",
+            "404684003",
+            "366157005",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "hipertensión arterial"
+          ],
+          "matchedTerms": [
+            "hipertensión arterial"
+          ],
+          "supportingSections": [
+            "Antecedentes personales"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:trastorno"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "hipertensión arterial",
+                "section": "Antecedentes personales",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "26237000",
+          "term": "edema maleolar",
+          "semanticTag": "hallazgo",
+          "ancestorIds": [
+            "116315007",
+            "267038008",
+            "302293008",
+            "419518009",
+            "424372002",
+            "138875005",
+            "116312005",
+            "102572006",
+            "404684003"
+          ],
+          "kind": "symptom",
+          "encounterPriority": 0,
+          "temporality": "historical",
+          "clinicalStatus": "unknown",
+          "score": 43,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "edemas maleolares"
+          ],
+          "matchedTerms": [
+            "edema maleolar"
+          ],
+          "supportingSections": [
+            "Enfermedad actual"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "historical"
+          ],
+          "rationale": [
+            "section:Enfermedad actual",
+            "semanticTag:hallazgo"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 43,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "edemas maleolares",
+                "section": "Enfermedad actual",
+                "assertion": "historical",
+                "parts": {
+                  "confidence": 30,
+                  "section": 12,
+                  "assertion": -10,
+                  "evidence": 9,
+                  "semanticTag": 2
+                },
+                "score": 43
+              }
+            ]
+          },
+          "principalEligible": false
+        }
+      ],
+      "suspected": [],
+      "changedPrincipal": false
+    },
+    {
+      "file": "ex-oncology-en-hybrid.json",
+      "groundingHealthy": true,
+      "capturedDiagnosisPolicy": "source-priority-v3",
+      "capturedPrincipal": {
+        "conceptId": "1306575001",
+        "term": "Infiltrating duct carcinoma of left breast",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "254838004",
+          "440299000",
+          "399981008",
+          "12240181000119104",
+          "609623002",
+          "118946009",
+          "722688002",
+          "128121009",
+          "309524007",
+          "116339002",
+          "188361007",
+          "79604008",
+          "300862005",
+          "408643008",
+          "126637008",
+          "254837009",
+          "609622007",
+          "298705000",
+          "126926005",
+          "255058005",
+          "290073004",
+          "302292003",
+          "300848003",
+          "89164003",
+          "64572001",
+          "363346000",
+          "138875005",
+          "404684003",
+          "55342001"
+        ],
+        "kind": "condition",
+        "encounterPriority": 5,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 106.4,
+        "confidencePct": 98,
+        "supportingSpanCount": 3,
+        "supportingSpans": [
+          "biopsy-proven invasive ductal carcinoma of the left breast",
+          "invasive ductal carcinoma of the left breast",
+          "Invasive ductal carcinoma of the left breast"
+        ],
+        "matchedTerms": [
+          "Infiltrating duct carcinoma of left breast"
+        ],
+        "supportingSections": [
+          "Reason for admission",
+          "Clinical background",
+          "Discharge assessment"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Reason for admission",
+          "assertion:present",
+          "semanticTag:disorder",
+          "section:Clinical background",
+          "section:Discharge assessment"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 98.4,
+          "repeatBonus": 8,
+          "contributions": [
+            {
+              "phrase": "biopsy-proven invasive ductal carcinoma of the left breast",
+              "section": "Reason for admission",
+              "assertion": "present",
+              "parts": {
+                "confidence": 0,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 59
+            },
+            {
+              "phrase": "invasive ductal carcinoma of the left breast",
+              "section": "Clinical background",
+              "assertion": "present",
+              "parts": {
+                "confidence": 29.4,
+                "section": 2,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 78.4
+            },
+            {
+              "phrase": "Invasive ductal carcinoma of the left breast",
+              "section": "Discharge assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 29.4,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 98.4
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "principal": {
+        "conceptId": "1306575001",
+        "term": "Infiltrating duct carcinoma of left breast",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "254838004",
+          "440299000",
+          "399981008",
+          "12240181000119104",
+          "609623002",
+          "118946009",
+          "722688002",
+          "128121009",
+          "309524007",
+          "116339002",
+          "188361007",
+          "79604008",
+          "300862005",
+          "408643008",
+          "126637008",
+          "254837009",
+          "609622007",
+          "298705000",
+          "126926005",
+          "255058005",
+          "290073004",
+          "302292003",
+          "300848003",
+          "89164003",
+          "64572001",
+          "363346000",
+          "138875005",
+          "404684003",
+          "55342001"
+        ],
+        "kind": "condition",
+        "encounterPriority": 5,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 106.4,
+        "confidencePct": 98,
+        "supportingSpanCount": 3,
+        "supportingSpans": [
+          "biopsy-proven invasive ductal carcinoma of the left breast",
+          "invasive ductal carcinoma of the left breast",
+          "Invasive ductal carcinoma of the left breast"
+        ],
+        "matchedTerms": [
+          "Infiltrating duct carcinoma of left breast"
+        ],
+        "supportingSections": [
+          "Reason for admission",
+          "Clinical background",
+          "Discharge assessment"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Reason for admission",
+          "assertion:present",
+          "semanticTag:disorder",
+          "section:Clinical background",
+          "section:Discharge assessment"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 98.4,
+          "repeatBonus": 8,
+          "contributions": [
+            {
+              "phrase": "biopsy-proven invasive ductal carcinoma of the left breast",
+              "section": "Reason for admission",
+              "assertion": "present",
+              "parts": {
+                "confidence": 0,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 59
+            },
+            {
+              "phrase": "invasive ductal carcinoma of the left breast",
+              "section": "Clinical background",
+              "assertion": "present",
+              "parts": {
+                "confidence": 29.4,
+                "section": 2,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 78.4
+            },
+            {
+              "phrase": "Invasive ductal carcinoma of the left breast",
+              "section": "Discharge assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 29.4,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 98.4
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "comorbidities": [],
+      "relatedDiagnoses": [],
+      "history": [
+        {
+          "conceptId": "213299007",
+          "term": "Postoperative pain",
+          "semanticTag": "finding",
+          "ancestorIds": [
+            "19585003",
+            "276435006",
+            "127325009",
+            "102957003",
+            "138875005",
+            "106147001",
+            "22253000",
+            "110364008",
+            "404684003",
+            "128926000"
+          ],
+          "kind": "symptom",
+          "encounterPriority": 0,
+          "temporality": "historical",
+          "clinicalStatus": "active",
+          "score": 33,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Postoperative pain"
+          ],
+          "matchedTerms": [
+            "Postoperative pain"
+          ],
+          "supportingSections": [
+            "Hospital course"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "historical"
+          ],
+          "rationale": [
+            "section:Hospital course",
+            "semanticTag:finding"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 33,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Postoperative pain",
+                "section": "Hospital course",
+                "assertion": "historical",
+                "parts": {
+                  "confidence": 30,
+                  "section": 2,
+                  "assertion": -10,
+                  "evidence": 9,
+                  "semanticTag": 2
+                },
+                "score": 33
+              }
+            ]
+          },
+          "principalEligible": false
+        }
+      ],
+      "suspected": [],
+      "changedPrincipal": false
+    },
+    {
+      "file": "ex-stroke-en-hybrid.json",
+      "groundingHealthy": true,
+      "capturedDiagnosisPolicy": "source-priority-v4",
+      "capturedPrincipal": null,
+      "principal": null,
+      "comorbidities": [
+        {
+          "conceptId": "282825002",
+          "term": "Intermittent atrial fibrillation",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "698247007",
+            "106066004",
+            "40593004",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "118946009",
+            "128121009",
+            "6285003",
+            "49436004",
+            "49601007",
+            "301113001",
+            "366157005",
+            "609622007",
+            "6456007",
+            "298705000",
+            "72654001",
+            "302292003",
+            "2704003",
+            "362965005",
+            "301095005",
+            "17366009",
+            "128487001",
+            "56265001",
+            "301296002",
+            "64572001",
+            "127337006",
+            "138875005",
+            "870575001",
+            "3424008",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 103,
+          "confidencePct": 100,
+          "supportingSpanCount": 2,
+          "supportingSpans": [
+            "intermittent atrial fibrillation",
+            "Paroxysmal atrial fibrillation"
+          ],
+          "matchedTerms": [
+            "Intermittent atrial fibrillation",
+            "Paroxysmal atrial fibrillation"
+          ],
+          "supportingSections": [
+            "Hospital course",
+            "Discharge assessment"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Hospital course",
+            "assertion:present",
+            "semanticTag:disorder",
+            "section:Discharge assessment"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 99,
+            "repeatBonus": 4,
+            "contributions": [
+              {
+                "phrase": "intermittent atrial fibrillation",
+                "section": "Hospital course",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 2,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 79
+              },
+              {
+                "phrase": "Paroxysmal atrial fibrillation",
+                "section": "Discharge assessment",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 99
+              }
+            ]
+          },
+          "principalEligible": true
+        }
+      ],
+      "relatedDiagnoses": [],
+      "history": [
+        {
+          "conceptId": "55822004",
+          "term": "Hyperlipidemia",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "238037008",
+            "166818002",
+            "118245000",
+            "442756004",
+            "441742003",
+            "127325009",
+            "365791005",
+            "48286001",
+            "75934005",
+            "785671009",
+            "124042003",
+            "64572001",
+            "138875005",
+            "442096005",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "hyperlipidemia"
+          ],
+          "matchedTerms": [
+            "Hyperlipidemia"
+          ],
+          "supportingSections": [
+            "Past medical history"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "hyperlipidemia",
+                "section": "Past medical history",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "38341003",
+          "term": "Hypertension",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "64572001",
+            "138875005",
+            "49601007",
+            "106063007",
+            "404684003",
+            "366157005",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "hypertension"
+          ],
+          "matchedTerms": [
+            "Hypertension"
+          ],
+          "supportingSections": [
+            "Past medical history"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "hypertension",
+                "section": "Past medical history",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "282825002",
+          "term": "Paroxysmal atrial fibrillation",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "698247007",
+            "106066004",
+            "40593004",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "118946009",
+            "128121009",
+            "6285003",
+            "49436004",
+            "49601007",
+            "301113001",
+            "366157005",
+            "609622007",
+            "6456007",
+            "298705000",
+            "72654001",
+            "302292003",
+            "2704003",
+            "362965005",
+            "301095005",
+            "17366009",
+            "128487001",
+            "56265001",
+            "301296002",
+            "64572001",
+            "127337006",
+            "138875005",
+            "870575001",
+            "3424008",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Paroxysmal atrial fibrillation"
+          ],
+          "matchedTerms": [
+            "Paroxysmal atrial fibrillation"
+          ],
+          "supportingSections": [
+            "Past medical history"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Paroxysmal atrial fibrillation",
+                "section": "Past medical history",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        }
+      ],
+      "suspected": [],
+      "changedPrincipal": false
+    },
+    {
+      "file": "gold-en-cardio-renal-hybrid.json",
+      "groundingHealthy": true,
+      "capturedDiagnosisPolicy": "source-priority-v3",
+      "capturedPrincipal": null,
+      "principal": null,
+      "comorbidities": [
+        {
+          "conceptId": "709044004",
+          "term": "Chronic kidney disease",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "1148582006",
+            "106098005",
+            "90708001",
+            "406123005",
+            "734045002",
+            "236423003",
+            "128121009",
+            "443820000",
+            "128606002",
+            "609624008",
+            "27624003",
+            "302292003",
+            "118228005",
+            "822988000",
+            "1156448003",
+            "362965005",
+            "128290005",
+            "822987005",
+            "42030000",
+            "118948005",
+            "249578005",
+            "249561001",
+            "64572001",
+            "138875005",
+            "118238000",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "chronic kidney disease"
+          ],
+          "matchedTerms": [
+            "Chronic kidney disease"
+          ],
+          "supportingSections": [
+            "History"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "chronic kidney disease",
+                "section": "History",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": true
+        },
+        {
+          "conceptId": "84114007",
+          "term": "Heart failure",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "609622007",
+            "298705000",
+            "302292003",
+            "118228005",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "118946009",
+            "362965005",
+            "301095005",
+            "56265001",
+            "128121009",
+            "301296002",
+            "64572001",
+            "105981003",
+            "138875005",
+            "49601007",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "heart failure"
+          ],
+          "matchedTerms": [
+            "Heart failure"
+          ],
+          "supportingSections": [
+            "History"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "heart failure",
+                "section": "History",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": true
+        },
+        {
+          "conceptId": "38341003",
+          "term": "Hypertension",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "64572001",
+            "138875005",
+            "49601007",
+            "106063007",
+            "404684003",
+            "366157005",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Hypertension"
+          ],
+          "matchedTerms": [
+            "Hypertension"
+          ],
+          "supportingSections": [
+            "History"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Hypertension",
+                "section": "History",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": true
+        }
+      ],
+      "relatedDiagnoses": [],
+      "history": [],
+      "suspected": [
+        {
+          "conceptId": "233604007",
+          "term": "Pneumonia",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "50043002",
+            "301230006",
+            "128601007",
+            "406123005",
+            "609623002",
+            "363180009",
+            "373405005",
+            "118946009",
+            "128121009",
+            "363169009",
+            "106048009",
+            "128139000",
+            "609622007",
+            "40733004",
+            "363171009",
+            "298705000",
+            "19829001",
+            "302292003",
+            "128272009",
+            "301226008",
+            "50417007",
+            "362965005",
+            "205237003",
+            "363170005",
+            "64572001",
+            "275498002",
+            "138875005",
+            "128997002",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "unknown",
+          "score": 87,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "pneumonia"
+          ],
+          "matchedTerms": [
+            "Pneumonia"
+          ],
+          "supportingSections": [
+            "Assessment"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "suspected"
+          ],
+          "rationale": [
+            "section:Assessment",
+            "assertion:suspected",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 87,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "pneumonia",
+                "section": "Assessment",
+                "assertion": "suspected",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 8,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 87
+              }
+            ]
+          },
+          "principalEligible": false
+        }
+      ],
+      "changedPrincipal": false
+    },
+    {
+      "file": "gold-en-cardiology-hybrid.json",
+      "groundingHealthy": true,
+      "capturedDiagnosisPolicy": "source-priority-v3",
+      "capturedPrincipal": {
+        "conceptId": "57054005",
+        "term": "Acute myocardial infarction",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "609410002",
+          "22298006",
+          "57809008",
+          "414545008",
+          "49483002",
+          "406123005",
+          "609623002",
+          "106063007",
+          "118946009",
+          "48125009",
+          "128121009",
+          "251052000",
+          "733217006",
+          "49601007",
+          "282728007",
+          "609622007",
+          "301122000",
+          "417163006",
+          "298705000",
+          "302292003",
+          "105612003",
+          "2704003",
+          "262525000",
+          "362965005",
+          "301095005",
+          "128487001",
+          "56265001",
+          "128599005",
+          "301296002",
+          "64572001",
+          "413439005",
+          "86175003",
+          "127337006",
+          "138875005",
+          "404684003",
+          "251061000"
+        ],
+        "kind": "condition",
+        "encounterPriority": 4,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 99,
+        "confidencePct": 100,
+        "supportingSpanCount": 1,
+        "supportingSpans": [
+          "Acute myocardial infarction"
+        ],
+        "matchedTerms": [
+          "Acute myocardial infarction"
+        ],
+        "supportingSections": [
+          "Assessment"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Assessment",
+          "assertion:present",
+          "semanticTag:disorder"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 99,
+          "repeatBonus": 0,
+          "contributions": [
+            {
+              "phrase": "Acute myocardial infarction",
+              "section": "Assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 99
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "principal": {
+        "conceptId": "57054005",
+        "term": "Acute myocardial infarction",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "609410002",
+          "22298006",
+          "57809008",
+          "414545008",
+          "49483002",
+          "406123005",
+          "609623002",
+          "106063007",
+          "118946009",
+          "48125009",
+          "128121009",
+          "251052000",
+          "733217006",
+          "49601007",
+          "282728007",
+          "609622007",
+          "301122000",
+          "417163006",
+          "298705000",
+          "302292003",
+          "105612003",
+          "2704003",
+          "262525000",
+          "362965005",
+          "301095005",
+          "128487001",
+          "56265001",
+          "128599005",
+          "301296002",
+          "64572001",
+          "413439005",
+          "86175003",
+          "127337006",
+          "138875005",
+          "404684003",
+          "251061000"
+        ],
+        "kind": "condition",
+        "encounterPriority": 4,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 99,
+        "confidencePct": 100,
+        "supportingSpanCount": 1,
+        "supportingSpans": [
+          "Acute myocardial infarction"
+        ],
+        "matchedTerms": [
+          "Acute myocardial infarction"
+        ],
+        "supportingSections": [
+          "Assessment"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Assessment",
+          "assertion:present",
+          "semanticTag:disorder"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 99,
+          "repeatBonus": 0,
+          "contributions": [
+            {
+              "phrase": "Acute myocardial infarction",
+              "section": "Assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 99
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "comorbidities": [
+        {
+          "conceptId": "84114007",
+          "term": "Heart failure",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "609622007",
+            "298705000",
+            "302292003",
+            "118228005",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "118946009",
+            "362965005",
+            "301095005",
+            "56265001",
+            "128121009",
+            "301296002",
+            "64572001",
+            "105981003",
+            "138875005",
+            "49601007",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 99,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "heart failure"
+          ],
+          "matchedTerms": [
+            "Heart failure"
+          ],
+          "supportingSections": [
+            "Assessment"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Assessment",
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 99,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "heart failure",
+                "section": "Assessment",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 99
+              }
+            ]
+          },
+          "principalEligible": true
+        }
+      ],
+      "relatedDiagnoses": [],
+      "history": [
+        {
+          "conceptId": "49436004",
+          "term": "Atrial fibrillation",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "698247007",
+            "106066004",
+            "40593004",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "118946009",
+            "128121009",
+            "6285003",
+            "49601007",
+            "301113001",
+            "366157005",
+            "609622007",
+            "6456007",
+            "298705000",
+            "72654001",
+            "302292003",
+            "362965005",
+            "301095005",
+            "17366009",
+            "56265001",
+            "301296002",
+            "64572001",
+            "138875005",
+            "870575001",
+            "3424008",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 2,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 99,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "atrial fibrillation"
+          ],
+          "matchedTerms": [
+            "Atrial fibrillation"
+          ],
+          "supportingSections": [
+            "Assessment"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Assessment",
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 99,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "atrial fibrillation",
+                "section": "Assessment",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 99
+              }
+            ]
+          },
+          "principalEligible": false
+        }
+      ],
+      "suspected": [],
+      "changedPrincipal": false
+    },
+    {
+      "file": "gold-en-diabetes-hybrid.json",
+      "groundingHealthy": true,
+      "capturedDiagnosisPolicy": "source-priority-v4",
+      "capturedPrincipal": {
+        "conceptId": "127013003",
+        "term": "Diabetic nephropathy",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "49698005",
+          "106098005",
+          "302292003",
+          "74627003",
+          "90708001",
+          "406123005",
+          "734045002",
+          "822988000",
+          "362965005",
+          "822987005",
+          "42030000",
+          "118948005",
+          "128121009",
+          "443820000",
+          "249578005",
+          "249561001",
+          "64572001",
+          "128606002",
+          "138875005",
+          "118238000",
+          "404684003",
+          "609624008"
+        ],
+        "kind": "condition",
+        "encounterPriority": 4,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 99,
+        "confidencePct": 100,
+        "supportingSpanCount": 1,
+        "supportingSpans": [
+          "Diabetic nephropathy"
+        ],
+        "matchedTerms": [
+          "Diabetic nephropathy"
+        ],
+        "supportingSections": [
+          "Assessment"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Assessment",
+          "assertion:present",
+          "semanticTag:disorder"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 99,
+          "repeatBonus": 0,
+          "contributions": [
+            {
+              "phrase": "Diabetic nephropathy",
+              "section": "Assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 99
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "principal": {
+        "conceptId": "127013003",
+        "term": "Diabetic nephropathy",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "49698005",
+          "106098005",
+          "302292003",
+          "74627003",
+          "90708001",
+          "406123005",
+          "734045002",
+          "822988000",
+          "362965005",
+          "822987005",
+          "42030000",
+          "118948005",
+          "128121009",
+          "443820000",
+          "249578005",
+          "249561001",
+          "64572001",
+          "128606002",
+          "138875005",
+          "118238000",
+          "404684003",
+          "609624008"
+        ],
+        "kind": "condition",
+        "encounterPriority": 4,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 99,
+        "confidencePct": 100,
+        "supportingSpanCount": 1,
+        "supportingSpans": [
+          "Diabetic nephropathy"
+        ],
+        "matchedTerms": [
+          "Diabetic nephropathy"
+        ],
+        "supportingSections": [
+          "Assessment"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Assessment",
+          "assertion:present",
+          "semanticTag:disorder"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 99,
+          "repeatBonus": 0,
+          "contributions": [
+            {
+              "phrase": "Diabetic nephropathy",
+              "section": "Assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 99
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "comorbidities": [
+        {
+          "conceptId": "44054006",
+          "term": "Type 2 diabetes mellitus",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "75934005",
+            "126877002",
+            "20957000",
+            "64572001",
+            "138875005",
+            "73211009",
+            "404684003",
+            "362969004",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 89,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "type 2 diabetes mellitus"
+          ],
+          "matchedTerms": [
+            "Type 2 diabetes mellitus"
+          ],
+          "supportingSections": [
+            "HPI"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:HPI",
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 89,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "type 2 diabetes mellitus",
+                "section": "HPI",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 12,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 89
+              }
+            ]
+          },
+          "principalEligible": true
+        }
+      ],
+      "relatedDiagnoses": [],
+      "history": [],
+      "suspected": [],
+      "changedPrincipal": false
+    },
+    {
+      "file": "gold-en-ischemic-hybrid.json",
+      "groundingHealthy": true,
+      "capturedDiagnosisPolicy": "source-priority-v4",
+      "capturedPrincipal": {
+        "conceptId": "53741008",
+        "term": "Coronary artery disease",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "21829004",
+          "362975008",
+          "301139003",
+          "49483002",
+          "406123005",
+          "609623002",
+          "106063007",
+          "118946009",
+          "19660004",
+          "128121009",
+          "49601007",
+          "248402002",
+          "27550009",
+          "609622007",
+          "414024009",
+          "896818001",
+          "298705000",
+          "280871000",
+          "302292003",
+          "359557001",
+          "248718009",
+          "72092001",
+          "251015000",
+          "362965005",
+          "301095005",
+          "56265001",
+          "128599005",
+          "301296002",
+          "64572001",
+          "138875005",
+          "404684003"
+        ],
+        "kind": "condition",
+        "encounterPriority": 4,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 99,
+        "confidencePct": 100,
+        "supportingSpanCount": 1,
+        "supportingSpans": [
+          "Coronary artery disease"
+        ],
+        "matchedTerms": [
+          "Coronary artery disease"
+        ],
+        "supportingSections": [
+          "Assessment"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Assessment",
+          "assertion:present",
+          "semanticTag:disorder"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 99,
+          "repeatBonus": 0,
+          "contributions": [
+            {
+              "phrase": "Coronary artery disease",
+              "section": "Assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 99
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "principal": {
+        "conceptId": "53741008",
+        "term": "Coronary artery disease",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "21829004",
+          "362975008",
+          "301139003",
+          "49483002",
+          "406123005",
+          "609623002",
+          "106063007",
+          "118946009",
+          "19660004",
+          "128121009",
+          "49601007",
+          "248402002",
+          "27550009",
+          "609622007",
+          "414024009",
+          "896818001",
+          "298705000",
+          "280871000",
+          "302292003",
+          "359557001",
+          "248718009",
+          "72092001",
+          "251015000",
+          "362965005",
+          "301095005",
+          "56265001",
+          "128599005",
+          "301296002",
+          "64572001",
+          "138875005",
+          "404684003"
+        ],
+        "kind": "condition",
+        "encounterPriority": 4,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 99,
+        "confidencePct": 100,
+        "supportingSpanCount": 1,
+        "supportingSpans": [
+          "Coronary artery disease"
+        ],
+        "matchedTerms": [
+          "Coronary artery disease"
+        ],
+        "supportingSections": [
+          "Assessment"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Assessment",
+          "assertion:present",
+          "semanticTag:disorder"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 99,
+          "repeatBonus": 0,
+          "contributions": [
+            {
+              "phrase": "Coronary artery disease",
+              "section": "Assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 99
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "comorbidities": [],
+      "relatedDiagnoses": [],
+      "history": [
+        {
+          "conceptId": "233819005",
+          "term": "Stable angina",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "434011000124101",
+            "301366005",
+            "276435006",
+            "414545008",
+            "128292002",
+            "301358001",
+            "49483002",
+            "406123005",
+            "609623002",
+            "106063007",
+            "279001004",
+            "118946009",
+            "48125009",
+            "413838009",
+            "128121009",
+            "128238001",
+            "733217006",
+            "49601007",
+            "699697007",
+            "22253000",
+            "282728007",
+            "609622007",
+            "417163006",
+            "298705000",
+            "27624003",
+            "302292003",
+            "105612003",
+            "102957003",
+            "106147001",
+            "262525000",
+            "362965005",
+            "301095005",
+            "82423001",
+            "56265001",
+            "29857009",
+            "128599005",
+            "301296002",
+            "64572001",
+            "86175003",
+            "138875005",
+            "194828000",
+            "404684003"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Stable angina"
+          ],
+          "matchedTerms": [
+            "Stable angina"
+          ],
+          "supportingSections": [
+            "History"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Stable angina",
+                "section": "History",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        },
+        {
+          "conceptId": "44054006",
+          "term": "Type 2 diabetes mellitus",
+          "semanticTag": "disorder",
+          "ancestorIds": [
+            "75934005",
+            "126877002",
+            "20957000",
+            "64572001",
+            "138875005",
+            "73211009",
+            "404684003",
+            "362969004",
+            "362965005"
+          ],
+          "kind": "condition",
+          "encounterPriority": 0,
+          "temporality": "unknown",
+          "clinicalStatus": "unknown",
+          "score": 69,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "type 2 diabetes mellitus"
+          ],
+          "matchedTerms": [
+            "Type 2 diabetes mellitus"
+          ],
+          "supportingSections": [
+            "History"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "assertion:present",
+            "semanticTag:disorder"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 69,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "type 2 diabetes mellitus",
+                "section": "History",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": -8,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 69
+              }
+            ]
+          },
+          "principalEligible": false
+        }
+      ],
+      "suspected": [],
+      "changedPrincipal": false
+    },
+    {
+      "file": "gold-en-oncology-hybrid.json",
+      "groundingHealthy": true,
+      "capturedDiagnosisPolicy": "source-priority-v4",
+      "capturedPrincipal": {
+        "conceptId": "254838004",
+        "term": "Carcinoma of breast",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "440299000",
+          "399981008",
+          "609623002",
+          "118946009",
+          "722688002",
+          "128121009",
+          "188361007",
+          "309524007",
+          "116339002",
+          "79604008",
+          "300862005",
+          "126637008",
+          "254837009",
+          "609622007",
+          "298705000",
+          "126926005",
+          "255058005",
+          "290073004",
+          "302292003",
+          "300848003",
+          "89164003",
+          "64572001",
+          "363346000",
+          "138875005",
+          "404684003",
+          "55342001"
+        ],
+        "kind": "condition",
+        "encounterPriority": 4,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 69,
+        "confidencePct": 0,
+        "supportingSpanCount": 1,
+        "supportingSpans": [
+          "Carcinoma of breast"
+        ],
+        "matchedTerms": [
+          "Carcinoma of breast"
+        ],
+        "supportingSections": [
+          "Assessment"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Assessment",
+          "assertion:present",
+          "semanticTag:disorder"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 69,
+          "repeatBonus": 0,
+          "contributions": [
+            {
+              "phrase": "Carcinoma of breast",
+              "section": "Assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 0,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 69
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "principal": {
+        "conceptId": "254838004",
+        "term": "Carcinoma of breast",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "440299000",
+          "399981008",
+          "609623002",
+          "118946009",
+          "722688002",
+          "128121009",
+          "188361007",
+          "309524007",
+          "116339002",
+          "79604008",
+          "300862005",
+          "126637008",
+          "254837009",
+          "609622007",
+          "298705000",
+          "126926005",
+          "255058005",
+          "290073004",
+          "302292003",
+          "300848003",
+          "89164003",
+          "64572001",
+          "363346000",
+          "138875005",
+          "404684003",
+          "55342001"
+        ],
+        "kind": "condition",
+        "encounterPriority": 4,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 69,
+        "confidencePct": 0,
+        "supportingSpanCount": 1,
+        "supportingSpans": [
+          "Carcinoma of breast"
+        ],
+        "matchedTerms": [
+          "Carcinoma of breast"
+        ],
+        "supportingSections": [
+          "Assessment"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Assessment",
+          "assertion:present",
+          "semanticTag:disorder"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 69,
+          "repeatBonus": 0,
+          "contributions": [
+            {
+              "phrase": "Carcinoma of breast",
+              "section": "Assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 0,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 69
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "comorbidities": [],
+      "relatedDiagnoses": [],
+      "history": [],
+      "suspected": [],
+      "changedPrincipal": false
+    },
+    {
+      "file": "gold-en-respiratory-hybrid.json",
+      "groundingHealthy": true,
+      "capturedDiagnosisPolicy": "source-priority-v3",
+      "capturedPrincipal": {
+        "conceptId": "195951007",
+        "term": "Acute exacerbation of chronic obstructive pulmonary disease",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "50043002",
+          "27624003",
+          "301227004",
+          "2704003",
+          "233776003",
+          "128272009",
+          "301226008",
+          "17097001",
+          "362965005",
+          "111273006",
+          "64572001",
+          "138875005",
+          "106048009",
+          "13645005",
+          "404684003"
+        ],
+        "kind": "condition",
+        "encounterPriority": 4,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 99,
+        "confidencePct": 100,
+        "supportingSpanCount": 1,
+        "supportingSpans": [
+          "Acute exacerbation of COPD"
+        ],
+        "matchedTerms": [
+          "Acute exacerbation of chronic obstructive pulmonary disease"
+        ],
+        "supportingSections": [
+          "Assessment"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Assessment",
+          "assertion:present",
+          "semanticTag:disorder"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 99,
+          "repeatBonus": 0,
+          "contributions": [
+            {
+              "phrase": "Acute exacerbation of COPD",
+              "section": "Assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 99
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "principal": {
+        "conceptId": "195951007",
+        "term": "Acute exacerbation of chronic obstructive pulmonary disease",
+        "semanticTag": "disorder",
+        "ancestorIds": [
+          "50043002",
+          "27624003",
+          "301227004",
+          "2704003",
+          "233776003",
+          "128272009",
+          "301226008",
+          "17097001",
+          "362965005",
+          "111273006",
+          "64572001",
+          "138875005",
+          "106048009",
+          "13645005",
+          "404684003"
+        ],
+        "kind": "condition",
+        "encounterPriority": 4,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 99,
+        "confidencePct": 100,
+        "supportingSpanCount": 1,
+        "supportingSpans": [
+          "Acute exacerbation of COPD"
+        ],
+        "matchedTerms": [
+          "Acute exacerbation of chronic obstructive pulmonary disease"
+        ],
+        "supportingSections": [
+          "Assessment"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Assessment",
+          "assertion:present",
+          "semanticTag:disorder"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 99,
+          "repeatBonus": 0,
+          "contributions": [
+            {
+              "phrase": "Acute exacerbation of COPD",
+              "section": "Assessment",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 22,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 99
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "comorbidities": [],
+      "relatedDiagnoses": [],
+      "history": [],
+      "suspected": [],
+      "changedPrincipal": false
+    },
+    {
+      "file": "gold-es-diabetes-hybrid.json",
+      "groundingHealthy": true,
+      "capturedDiagnosisPolicy": "source-priority-v4",
+      "capturedPrincipal": {
+        "conceptId": "44054006",
+        "term": "diabetes mellitus tipo 2",
+        "semanticTag": "trastorno",
+        "ancestorIds": [
+          "75934005",
+          "126877002",
+          "20957000",
+          "64572001",
+          "138875005",
+          "73211009",
+          "404684003",
+          "362969004",
+          "362965005"
+        ],
+        "kind": "condition",
+        "encounterPriority": 5,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 89,
+        "confidencePct": 100,
+        "supportingSpanCount": 1,
+        "supportingSpans": [
+          "diabetes mellitus tipo 2"
+        ],
+        "matchedTerms": [
+          "diabetes mellitus tipo 2"
+        ],
+        "supportingSections": [
+          "Motivo"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Motivo",
+          "assertion:present",
+          "semanticTag:trastorno"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 89,
+          "repeatBonus": 0,
+          "contributions": [
+            {
+              "phrase": "diabetes mellitus tipo 2",
+              "section": "Motivo",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 89
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "principal": {
+        "conceptId": "44054006",
+        "term": "diabetes mellitus tipo 2",
+        "semanticTag": "trastorno",
+        "ancestorIds": [
+          "75934005",
+          "126877002",
+          "20957000",
+          "64572001",
+          "138875005",
+          "73211009",
+          "404684003",
+          "362969004",
+          "362965005"
+        ],
+        "kind": "condition",
+        "encounterPriority": 5,
+        "temporality": "current",
+        "clinicalStatus": "active",
+        "score": 89,
+        "confidencePct": 100,
+        "supportingSpanCount": 1,
+        "supportingSpans": [
+          "diabetes mellitus tipo 2"
+        ],
+        "matchedTerms": [
+          "diabetes mellitus tipo 2"
+        ],
+        "supportingSections": [
+          "Motivo"
+        ],
+        "evidenceTypes": [
+          "direct"
+        ],
+        "assertions": [
+          "present"
+        ],
+        "rationale": [
+          "section:Motivo",
+          "assertion:present",
+          "semanticTag:trastorno"
+        ],
+        "mergedConcepts": [],
+        "scoreBreakdown": {
+          "bestMentionScore": 89,
+          "repeatBonus": 0,
+          "contributions": [
+            {
+              "phrase": "diabetes mellitus tipo 2",
+              "section": "Motivo",
+              "assertion": "present",
+              "parts": {
+                "confidence": 30,
+                "section": 12,
+                "assertion": 20,
+                "evidence": 9,
+                "semanticTag": 18
+              },
+              "score": 89
+            }
+          ]
+        },
+        "principalEligible": true
+      },
+      "comorbidities": [
+        {
+          "conceptId": "127013003",
+          "term": "nefropatía diabética",
+          "semanticTag": "trastorno",
+          "ancestorIds": [
+            "49698005",
+            "106098005",
+            "302292003",
+            "74627003",
+            "90708001",
+            "406123005",
+            "734045002",
+            "822988000",
+            "362965005",
+            "822987005",
+            "42030000",
+            "118948005",
+            "128121009",
+            "443820000",
+            "249578005",
+            "249561001",
+            "64572001",
+            "128606002",
+            "138875005",
+            "118238000",
+            "404684003",
+            "609624008"
+          ],
+          "kind": "condition",
+          "encounterPriority": 4,
+          "temporality": "current",
+          "clinicalStatus": "active",
+          "score": 99,
+          "confidencePct": 100,
+          "supportingSpanCount": 1,
+          "supportingSpans": [
+            "Nefropatía diabética"
+          ],
+          "matchedTerms": [
+            "nefropatía diabética"
+          ],
+          "supportingSections": [
+            "Evaluación"
+          ],
+          "evidenceTypes": [
+            "direct"
+          ],
+          "assertions": [
+            "present"
+          ],
+          "rationale": [
+            "section:Evaluación",
+            "assertion:present",
+            "semanticTag:trastorno"
+          ],
+          "mergedConcepts": [],
+          "scoreBreakdown": {
+            "bestMentionScore": 99,
+            "repeatBonus": 0,
+            "contributions": [
+              {
+                "phrase": "Nefropatía diabética",
+                "section": "Evaluación",
+                "assertion": "present",
+                "parts": {
+                  "confidence": 30,
+                  "section": 22,
+                  "assertion": 20,
+                  "evidence": 9,
+                  "semanticTag": 18
+                },
+                "score": 99
+              }
+            ]
+          },
+          "principalEligible": true
+        }
+      ],
+      "relatedDiagnoses": [],
+      "history": [],
+      "suspected": [],
+      "changedPrincipal": false
+    }
+  ]
+}

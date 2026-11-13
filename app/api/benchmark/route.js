@@ -1,8 +1,11 @@
 import { getCollection } from "@/lib/mongo";
-import { getMongoConfig, getLlmConfig } from "@/lib/config";
-import { goldFacts, goldExpectedConcepts } from "@/lib/gold-notes";
+import { getMongoConfig, getSemanticsConfig } from "@/lib/config";
+import { getRuntimeLlmConfig, benchmarkModels } from "@/lib/runtime-llm-config";
+import { publicLlmConfig } from "@/lib/llm-models";
+import { goldFacts, goldExpectedConcepts, goldDiagnosisSummary } from "@/lib/gold-notes";
 import { getAllGoldNotes } from "@/lib/gold-store";
 import { ok, fail, parseJson, elapsedMs } from "@/lib/http";
+import { postJson } from "@/lib/json-http-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,16 +19,20 @@ export const dynamic = "force-dynamic";
 // A separate RETRIEVAL axis reports whether the extracted mentions resolve to the
 // expected SNOMED concepts under the chosen search mode (lexical / hybrid) — that
 // measures MongoDB retrieval, holding extraction constant.
+//
+// A DIAGNOSIS axis scores the note-level proposal against the coder's summary:
+// is the proposed principal the gold principal (top-1, and within the top 3),
+// and do the proposed comorbidities match the gold ones (precision / recall).
+// Exact identifiers are scored; hierarchy proximity is reported separately.
 
-// Per-cell timeout. Large notes on slow/reasoning models can take 30-60s+;
-// default 2 min so genuine runs aren't cut off. Override with env if needed.
-const NOTE_TIMEOUT_MS = Number(process.env.BENCHMARK_NOTE_TIMEOUT_MS) || 120000;
+// Total per-note deadline includes extraction and source-based verification.
+const NOTE_TIMEOUT_MS = Number(process.env.BENCHMARK_NOTE_TIMEOUT_MS) || 600000;
 const SEARCH_MODES = new Set(["lexical", "hybrid"]);
 
 async function ancestorSet(collection, id, cache) {
   const k = String(id);
   if (cache.has(k)) return cache.get(k);
-  const doc = await collection.findOne({ conceptId: k }, { projection: { _id: 0, inferredAncestorIds: 1 } });
+  const doc = await collection.findOne({ conceptId: k,releaseId:getSemanticsConfig().releaseId }, { projection: { _id: 0, inferredAncestorIds: 1 } });
   const set = new Set([k, ...((doc?.inferredAncestorIds || []).map(String))]);
   cache.set(k, set);
   return set;
@@ -67,14 +74,52 @@ function polarity(assertion) {
 }
 function mean(arr) { return arr.length ? arr.reduce((s, x) => s + x, 0) / arr.length : 0; }
 
+// Hierarchy proximity does not establish equivalence: descendants can add an
+// undocumented cause/site/stage, and ancestors can omit a defining qualifier.
+async function scoreDiagnosis(gold, data, matches) {
+  if (!gold) return null;
+  const candidates = (data.principalDiagnosisCandidates || []).map((c) => String(c.conceptId));
+  const proposedPrincipal = data.principalDiagnosis ? String(data.principalDiagnosis.conceptId) : null;
+  const proposedComorbidities = (data.comorbidities || []).map((c) => String(c.conceptId));
+
+  const principalTop1 = gold.principalScorable === false ? null : proposedPrincipal && await matches(gold.principal.conceptId, [proposedPrincipal]) ? 1 : 0;
+  const principalTop3 = gold.principalScorable === false ? null : candidates.length && await matches(gold.principal.conceptId, candidates.slice(0, 3)) ? 1 : 0;
+
+  const expected = gold.comorbidities.map((c) => String(c.conceptId));
+  let found = 0;
+  for (const id of expected) if (await matches(id, proposedComorbidities)) found += 1;
+  let correct = 0;
+  for (const id of proposedComorbidities) {
+    // A proposed comorbidity is correct when it matches a gold comorbidity. One
+    // that matches the gold principal instead is a principal/secondary swap.
+    for (const exp of expected) { if (await matches(exp, [id])) { correct += 1; break; } }
+  }
+  return {
+    principalTop1,
+    principalTop3,
+    principalReferenceStatus: gold.principalScorable === false ? 'needs-adjudication' : 'scored',
+    // Empty gold list + empty proposal is a perfect answer, not undefined.
+    comorbidityRecall: expected.length ? found / expected.length : 1,
+    comorbidityPrecision: proposedComorbidities.length ? correct / proposedComorbidities.length : (expected.length ? 0 : 1),
+    gold: { principal: gold.principal, comorbidities: gold.comorbidities },
+    proposed: {
+      principal: data.principalDiagnosis ? { conceptId: String(data.principalDiagnosis.conceptId), term: data.principalDiagnosis.term } : null,
+      candidates: (data.principalDiagnosisCandidates || []).map((c) => ({ conceptId: String(c.conceptId), term: c.term, score: c.score })),
+      comorbidities: (data.comorbidities || []).map((c) => ({ conceptId: String(c.conceptId), term: c.term }))
+    }
+  };
+}
+
 export async function POST(request) {
   const startedAt = process.hrtime.bigint();
   try {
     const body = await parseJson(request).catch(() => ({}));
-    const llm = getLlmConfig();
-    const requested = Array.isArray(body?.models) ? body.models.filter((m) => llm.models.includes(m)) : [];
-    const models = requested.length ? requested : llm.models;
-    const searchMode = SEARCH_MODES.has(body?.searchMode) ? body.searchMode : "lexical";
+    const llm = await getRuntimeLlmConfig();
+    const models = body?.metaOnly ? [] : benchmarkModels(llm, body?.models);
+    const searchMode = SEARCH_MODES.has(body?.searchMode) ? body.searchMode : "hybrid";
+    // Session hybrid tuning, forwarded to every grounding call so a hybrid
+    // benchmark measures the same fusion settings the user searches with.
+    const tuning = searchMode === "hybrid" && body?.tuning && typeof body.tuning === "object" ? body.tuning : null;
 
     const ALL_GOLD = await getAllGoldNotes();
     const goldSummary = ALL_GOLD.map((g) => ({
@@ -84,7 +129,7 @@ export async function POST(request) {
       conceptCount: goldExpectedConcepts(g).length
     }));
     if (body?.metaOnly) {
-      return ok({ ok: true, availableModels: llm.models, goldNotes: goldSummary, latencyMs: elapsedMs(startedAt) });
+      return ok({ ok: true, ...publicLlmConfig(llm), goldNotes: goldSummary, latencyMs: elapsedMs(startedAt) });
     }
 
     const noteIds = Array.isArray(body?.noteIds) && body.noteIds.length ? body.noteIds.map(String) : null;
@@ -92,17 +137,17 @@ export async function POST(request) {
 
     const origin = new URL(request.url).origin;
     const { sourceCollection, termSearchCollection } = getMongoConfig();
+    const {releaseId} = getSemanticsConfig();
     const source = await getCollection(sourceCollection);
     const sidecar = await getCollection(termSearchCollection);
     const cache = new Map();
-    // A concept is retrievable only if it's in the search sidecar. If a gold
-    // concept isn't, that's a CONTROLLED scope gap (known demo-data limitation),
-    // not a retrieval failure — we exclude it from the retrieval score.
+    // Coverage gaps remain in the end-to-end denominator. The in-scope score
+    // is a diagnostic metric, so pruning the database cannot improve accuracy.
     const scopeCache = new Map();
-    const inSidecar = async (id) => {
-      const k = String(id);
+    const inSidecar = async (id,languageCode) => {
+      const k = `${languageCode}|${id}`;
       if (scopeCache.has(k)) return scopeCache.get(k);
-      const doc = await sidecar.findOne({ conceptId: k }, { projection: { _id: 1 } });
+      const doc = await sidecar.findOne({ conceptId:String(id), languageCode,releaseId, active:true, conceptActive:true,typeId:{$in:['900000000000003001','900000000000013009']} }, { projection: { _id: 1 } });
       const v = Boolean(doc);
       scopeCache.set(k, v);
       return v;
@@ -110,20 +155,12 @@ export async function POST(request) {
 
     const groundOne = async (note, model) => {
       const t0 = Date.now();
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), NOTE_TIMEOUT_MS);
       let data = {};
       let error = null;
       try {
-        const res = await fetch(`${origin}/api/nlp-map`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ text: note.text, languageCode: note.languageCode, model, searchMode, searchTimeoutMs: 12000, noCache: true, includeLlmIO: true }),
-          signal: controller.signal
-        });
-        data = await res.json().catch(() => ({}));
-      } catch (e) { error = e?.name === "AbortError" ? `timeout >${NOTE_TIMEOUT_MS}ms` : (e?.message || "request failed"); }
-      finally { clearTimeout(timer); }
+        const res = await postJson(`${origin}/api/nlp-map`, { text: note.text, languageCode: note.languageCode, model, searchMode, ...(tuning ? { tuning } : {}), searchTimeoutMs: 12000, noCache: true, includeLlmIO: true }, NOTE_TIMEOUT_MS);
+        data = res.body;
+      } catch (e) { error = e?.message || "request failed"; }
 
       const ms = Date.now() - t0;
       const results = Array.isArray(data.results) ? data.results : [];
@@ -147,7 +184,8 @@ export async function POST(request) {
         section: r.llmSection || "other",
         conceptId: r.topCandidate ? String(r.topCandidate.conceptId) : null,
         term: r.topCandidate?.term || null,
-        present: r.assertion !== "absent" && (r.experiencer || "patient") === "patient"
+        accepted:r.status==='accepted',
+        present: ['present','historical'].includes(r.assertion) && (r.experiencer || "patient") === "patient"
       }));
       const factMatch = (m, f) => phraseMatch(m.verbatim, f.phrase) || phraseMatch(m.phrase, f.phrase);
 
@@ -190,27 +228,38 @@ export async function POST(request) {
 
       // ── Retrieval axis: do present-patient facts resolve to their concept? ──
       const presentIds = new Set(mentions.filter((m) => m.present && m.conceptId).map((m) => m.conceptId));
+      const acceptedIds = new Set(mentions.filter(m=>m.present&&m.accepted&&m.conceptId).map(m=>m.conceptId));
       const expectedConcepts = goldExpectedConcepts(note);
       let retHits = 0;
       let inScopeCount = 0;
       const retrievalHits = [];
       for (const exp of expectedConcepts) {
-        const inScope = await inSidecar(exp.conceptId);
+        const inScope = await inSidecar(exp.conceptId,note.languageCode);
         const exact = presentIds.has(String(exp.conceptId));
-        const hit = exact || await subsumes(source, exp.conceptId, presentIds, cache);
+        const hierarchyRelated = exact || await subsumes(source, exp.conceptId, presentIds, cache);
+        const hit = exact;
         if (inScope) { inScopeCount += 1; if (hit) retHits += 1; }
-        retrievalHits.push({ conceptId: exp.conceptId, term: exp.term, hit, exact, inScope });
+        retrievalHits.push({ conceptId: exp.conceptId, term: exp.term, hit, exact, hierarchyRelated, accepted:acceptedIds.has(String(exp.conceptId)), inScope });
       }
       const outOfScopeCount = expectedConcepts.length - inScopeCount;
-      // Score only over concepts that are actually in the demo sidecar; the rest
-      // are controlled scope gaps, reported separately, not counted as failures.
-      const retrievalRecall = inScopeCount ? retHits / inScopeCount : null;
+      const inScopeRetrievalRecall = inScopeCount ? retHits / inScopeCount : null;
+      const retrievalRecall = expectedConcepts.length ? retrievalHits.filter(h=>h.exact).length/expectedConcepts.length : null;
+      const acceptedMappingRecall = expectedConcepts.length ? retrievalHits.filter(h=>h.accepted).length/expectedConcepts.length : null;
+
+      // ── Diagnosis axis: principal + comorbidities vs the coder's summary. ──
+      const diagnosis = await scoreDiagnosis(goldDiagnosisSummary(note), data, (expectedId, ids) => ids.some(id=>String(id)===String(expectedId)));
 
       return {
         noteId: note.id, scored: true, extractor,
         detection, assertionAcc, subjectAcc, graphRecall, precision, evidenceComposite,
         extraMentions, factCount: facts.length,
-        retrievalRecall, retrievalHits, expectedConceptCount: expectedConcepts.length, inScopeCount, outOfScopeCount,
+        retrievalRecall, inScopeRetrievalRecall, acceptedMappingRecall, retrievalHits, expectedConceptCount: expectedConcepts.length, inScopeCount, outOfScopeCount,
+        semanticFailures:data.stats?.semanticFailureCount||0,
+        diagnosis,
+        principalTop1: diagnosis?.principalTop1 ?? null,
+        principalTop3: diagnosis?.principalTop3 ?? null,
+        comorbidityPrecision: diagnosis?.comorbidityPrecision ?? null,
+        comorbidityRecall: diagnosis?.comorbidityRecall ?? null,
         factHits, mentions,
         llmPrompt: data.extractorPrompt || null,
         llmRaw: data.extractorRaw || null,
@@ -220,7 +269,8 @@ export async function POST(request) {
 
     const perModel = [];
     for (const model of models) {
-      const notes = await Promise.all(notesToRun.map((note) => groundOne(note, model)));
+      const notes=[];
+      for(const note of notesToRun)notes.push(await groundOne(note,model));
       const scored = notes.filter((n) => n.scored);
       const s = scored.length;
       const avg = (sel) => mean(scored.map(sel).filter((x) => x != null));
@@ -237,6 +287,12 @@ export async function POST(request) {
         subjectAcc: avg((n) => n.subjectAcc),
         precision: avg((n) => n.precision),
         retrievalRecall: avg((n) => n.retrievalRecall),
+        acceptedMappingRecall:avg(n=>n.acceptedMappingRecall),
+        semanticFailures:notes.reduce((n,row)=>n+(row.semanticFailures||0),0),
+        principalTop1: avg((n) => n.principalTop1),
+        principalTop3: avg((n) => n.principalTop3),
+        comorbidityPrecision: avg((n) => n.comorbidityPrecision),
+        comorbidityRecall: avg((n) => n.comorbidityRecall),
         tokens: notes.reduce((a, n) => a + (n.tokens || 0), 0),
         tokensPerNote,
         avgLatencyMs: notes.length ? Math.round(notes.reduce((a, n) => a + (n.ms || 0), 0) / notes.length) : 0,
@@ -261,12 +317,14 @@ export async function POST(request) {
       enabled: llm.enabled,
       availableModels: llm.models,
       searchMode,
+      tuning,
+      scoringPolicy:'exact-concept-v1; coverage gaps included; hierarchy proximity diagnostic only',
       goldNotes: goldSummary,
       models: perModel,
       recommended,
       latencyMs: elapsedMs(startedAt)
     });
   } catch (error) {
-    return fail("Benchmark failed", 500, { detail: error?.message, latencyMs: elapsedMs(startedAt) });
+    return fail("Benchmark failed", error?.status || 500, { code: error?.code, detail: error?.message, latencyMs: elapsedMs(startedAt) });
   }
 }

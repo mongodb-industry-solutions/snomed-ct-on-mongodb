@@ -1,0 +1,213 @@
+{
+  "checkedAt": "2026-11-12T12:29:46.055Z",
+  "notes": 16,
+  "scope": "Read-only function-level probes using accepted captured results and the workbench deduplication key. Not browser observation, actual output selection, saving, or full FHIR conformance validation.",
+  "issueCounts": {
+    "later-qualifiers-lost-with-first-row-deduplication": 6,
+    "family-relationship-not-structured": 8,
+    "measurement-has-no-export-resource": 4,
+    "encounter-pain-exported-as-active-despite-resolution": 4
+  },
+  "issues": [
+    {
+      "noteId": "ex-diabetes-en",
+      "index": 2,
+      "mentionId": "m-3-106-130",
+      "issue": "later-qualifiers-lost-with-first-row-deduplication",
+      "firstMentionId": "m-2-32-56",
+      "laterAttributes": {
+        "duration": "12 years"
+      }
+    },
+    {
+      "noteId": "ex-diabetes-en",
+      "index": 17,
+      "mentionId": "m-18-688-724",
+      "issue": "family-relationship-not-structured",
+      "attributes": {
+        "family_relationship": "father"
+      }
+    },
+    {
+      "noteId": "ex-diabetes-es",
+      "index": 1,
+      "mentionId": "m-2-90-138",
+      "issue": "later-qualifiers-lost-with-first-row-deduplication",
+      "firstMentionId": "m-1-32-56",
+      "laterAttributes": {
+        "duration": "12 años de evolución"
+      }
+    },
+    {
+      "noteId": "ex-diabetes-es",
+      "index": 9,
+      "mentionId": "m-10-417-440",
+      "issue": "later-qualifiers-lost-with-first-row-deduplication",
+      "firstMentionId": "m-3-172-200",
+      "laterAttributes": {
+        "duration": "persistente"
+      }
+    },
+    {
+      "noteId": "ex-diabetes-es",
+      "index": 17,
+      "mentionId": "m-18-755-789",
+      "issue": "family-relationship-not-structured",
+      "attributes": {
+        "family_relationship": "Padre"
+      }
+    },
+    {
+      "noteId": "ex-hf-en",
+      "index": 19,
+      "mentionId": "m-20-724-765",
+      "issue": "measurement-has-no-export-resource",
+      "attributes": {
+        "value": "35%"
+      }
+    },
+    {
+      "noteId": "ex-hf-es",
+      "index": 19,
+      "mentionId": "m-20-832-885",
+      "issue": "measurement-has-no-export-resource",
+      "attributes": {
+        "valor": "35%",
+        "prueba": "ecocardiograma"
+      }
+    },
+    {
+      "noteId": "ex-full-report-en",
+      "index": 8,
+      "mentionId": "m-9-367-400",
+      "issue": "family-relationship-not-structured",
+      "attributes": {
+        "family relationship": "father"
+      }
+    },
+    {
+      "noteId": "ex-full-report-en",
+      "index": 9,
+      "mentionId": "m-10-402-427",
+      "issue": "family-relationship-not-structured",
+      "attributes": {
+        "family relationship": "mother"
+      }
+    },
+    {
+      "noteId": "ex-oncology-en",
+      "index": 9,
+      "mentionId": "m-10-490-525",
+      "issue": "family-relationship-not-structured",
+      "attributes": {
+        "family_relationship": "mother",
+        "age": "52"
+      }
+    },
+    {
+      "noteId": "ex-oncology-en",
+      "index": 20,
+      "mentionId": "m-21-972-982",
+      "issue": "later-qualifiers-lost-with-first-row-deduplication",
+      "firstMentionId": "m-11-548-570",
+      "laterAttributes": {
+        "status": "status post"
+      }
+    },
+    {
+      "noteId": "ex-oncology-en",
+      "index": 22,
+      "mentionId": "m-23-1027-1058",
+      "issue": "family-relationship-not-structured",
+      "attributes": {
+        "context": "family history"
+      }
+    },
+    {
+      "noteId": "ex-oncology-en",
+      "index": 22,
+      "mentionId": "m-23-1027-1058",
+      "issue": "later-qualifiers-lost-with-first-row-deduplication",
+      "firstMentionId": "m-10-490-525",
+      "laterAttributes": {
+        "context": "family history"
+      }
+    },
+    {
+      "noteId": "ex-stroke-en",
+      "index": 22,
+      "mentionId": "m-23-850-868",
+      "issue": "later-qualifiers-lost-with-first-row-deduplication",
+      "firstMentionId": "m-5-222-240",
+      "laterAttributes": {
+        "course": "improving"
+      }
+    },
+    {
+      "noteId": "ex-chestpain-en",
+      "index": 0,
+      "mentionId": "m-1-43-53",
+      "issue": "encounter-pain-exported-as-active-despite-resolution",
+      "attributes": {}
+    },
+    {
+      "noteId": "ex-chestpain-en",
+      "index": 9,
+      "mentionId": "m-10-341-383",
+      "issue": "family-relationship-not-structured",
+      "attributes": {
+        "family_relationship": "father",
+        "age": "60"
+      }
+    },
+    {
+      "noteId": "ex-chestpain-en",
+      "index": 10,
+      "mentionId": "m-11-398-424",
+      "issue": "measurement-has-no-export-resource",
+      "attributes": {
+        "value": "158/92 mmHg"
+      }
+    },
+    {
+      "noteId": "ex-chestpain-en",
+      "index": 17,
+      "mentionId": "m-18-572-582",
+      "issue": "encounter-pain-exported-as-active-despite-resolution",
+      "attributes": {}
+    },
+    {
+      "noteId": "ex-chestpain-es",
+      "index": 0,
+      "mentionId": "m-1-38-52",
+      "issue": "encounter-pain-exported-as-active-despite-resolution",
+      "attributes": {}
+    },
+    {
+      "noteId": "ex-chestpain-es",
+      "index": 9,
+      "mentionId": "m-10-345-389",
+      "issue": "family-relationship-not-structured",
+      "attributes": {
+        "family_relationship": "padre",
+        "age": "60 años"
+      }
+    },
+    {
+      "noteId": "ex-chestpain-es",
+      "index": 10,
+      "mentionId": "m-11-411-439",
+      "issue": "measurement-has-no-export-resource",
+      "attributes": {
+        "value": "158/92 mmHg"
+      }
+    },
+    {
+      "noteId": "ex-chestpain-es",
+      "index": 18,
+      "mentionId": "m-19-674-688",
+      "issue": "encounter-pain-exported-as-active-despite-resolution",
+      "attributes": {}
+    }
+  ]
+}

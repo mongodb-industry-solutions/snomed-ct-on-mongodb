@@ -1,0 +1,31 @@
+{
+  "defaultModel": "gpt-5.4-nano",
+  "textModels": 40,
+  "benchmarkMatchesSession": true,
+  "extractionChecks": [
+    {
+      "requestedModel": "claude-opus-5-5",
+      "executedModel": "claude-opus-5-5",
+      "mentions": 2,
+      "llmExtraction": true
+    },
+    {
+      "requestedModel": "cohere-command-a",
+      "executedModel": "cohere-command-a",
+      "mentions": 2,
+      "llmExtraction": true
+    },
+    {
+      "requestedModel": "deepseek-v4-flash",
+      "executedModel": "deepseek-v4-flash",
+      "mentions": 2,
+      "llmExtraction": true
+    },
+    {
+      "requestedModel": "Kimi-K2.7-Code",
+      "executedModel": "Kimi-K2.7-Code",
+      "mentions": 2,
+      "llmExtraction": true
+    }
+  ]
+}

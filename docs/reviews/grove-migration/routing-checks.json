@@ -1,0 +1,335 @@
+{
+  "checkedAt": "2026-11-12T18:11:29.833Z",
+  "defaultModel": "gpt-5.4-nano",
+  "models": 40,
+  "protocolCounts": {
+    "chat": 8,
+    "responses": 18,
+    "anthropic": 14
+  },
+  "results": [
+    {
+      "model": "gpt-5.4-nano",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1140
+    },
+    {
+      "model": "gpt-5.4",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1140
+    },
+    {
+      "model": "gpt-5.4-mini",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1290
+    },
+    {
+      "model": "gpt-5.5",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1355
+    },
+    {
+      "model": "claude-haiku-4-5",
+      "protocol": "anthropic",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1080
+    },
+    {
+      "model": "claude-fable-5-1",
+      "protocol": "anthropic",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 2928
+    },
+    {
+      "model": "claude-haiku-5-5",
+      "protocol": "anthropic",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1070
+    },
+    {
+      "model": "claude-fable-5",
+      "protocol": "anthropic",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 3722
+    },
+    {
+      "model": "claude-opus-4-5",
+      "protocol": "anthropic",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1464
+    },
+    {
+      "model": "claude-opus-4-7",
+      "protocol": "anthropic",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 970
+    },
+    {
+      "model": "claude-opus-4-6",
+      "protocol": "anthropic",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1667
+    },
+    {
+      "model": "claude-opus-5",
+      "protocol": "anthropic",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1160
+    },
+    {
+      "model": "claude-opus-4-8",
+      "protocol": "anthropic",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1556
+    },
+    {
+      "model": "claude-opus-5-5",
+      "protocol": "anthropic",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1110
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "protocol": "anthropic",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 580
+    },
+    {
+      "model": "claude-sonnet-4-5",
+      "protocol": "anthropic",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 876
+    },
+    {
+      "model": "claude-sonnet-5",
+      "protocol": "anthropic",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 993
+    },
+    {
+      "model": "cohere-command-a",
+      "protocol": "chat",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 741
+    },
+    {
+      "model": "claude-sonnet-5-5",
+      "protocol": "anthropic",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 796
+    },
+    {
+      "model": "deepseek-v4-flash-0731",
+      "protocol": "chat",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 666
+    },
+    {
+      "model": "deepseek-v4.1-flash",
+      "protocol": "chat",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 694
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "protocol": "chat",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1197
+    },
+    {
+      "model": "glm-5.3-flash",
+      "protocol": "chat",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1539
+    },
+    {
+      "model": "glm-5.3",
+      "protocol": "chat",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1596
+    },
+    {
+      "model": "gpt-4.1",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1538
+    },
+    {
+      "model": "gpt-4.1-mini",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1191
+    },
+    {
+      "model": "gpt-4o",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1204
+    },
+    {
+      "model": "gpt-4o-mini",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 952
+    },
+    {
+      "model": "gpt-5.3-codex",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1345
+    },
+    {
+      "model": "gpt-5.2",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1418
+    },
+    {
+      "model": "gpt-5-codex",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1789
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 885
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1160
+    },
+    {
+      "model": "gpt-6-astra",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1422
+    },
+    {
+      "model": "gpt-6-luna",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1497
+    },
+    {
+      "model": "gpt-6-sol",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1035
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 3395
+    },
+    {
+      "model": "Kimi-K2.7-Code",
+      "protocol": "chat",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1536
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "protocol": "responses",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 2217
+    },
+    {
+      "model": "kimi-k3",
+      "protocol": "chat",
+      "ok": true,
+      "textPresent": true,
+      "jsonValid": true,
+      "wallMs": 1533
+    }
+  ],
+  "successfulRequests": 40,
+  "structuredResponses": 40,
+  "note": "Synthetic minimal-output routing checks; not a clinical accuracy evaluation."
+}
