@@ -312,7 +312,7 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
           </span>
           <RetrievalModeToggle mode={retrievalMode} setMode={setRetrievalMode} disabled={retrieval.running} />
           <button type="button" style={{ ...primaryBtn, padding: "8px 18px" }} disabled={retrieval.running} onClick={() => runRetrieval()}>
-            {retrieval.running ? "Retrieving from MongoDB…" : "Retrieve SNOMED candidates"}
+            {retrieval.running ? "Grounding and verifying…" : "Retrieve and verify candidates"}
           </button>
           {retrievalMode === "hybrid" && hybridTuning?.tuning ? (
             <div style={{ width: "100%" }}>
@@ -332,6 +332,7 @@ export default function GroundWorkbench({ defaultLanguageCode = "en", sessionMod
       ) : (
         <RetrievalSummary
           retrieval={response.retrieval}
+          timings={response.stats?.timingsMs}
           running={retrieval.running}
           error={retrieval.error}
           mode={retrievalMode}
@@ -412,7 +413,7 @@ function RetrievalModeToggle({ mode, setMode, disabled }) {
 
 // After Stage 2: what retrieval actually ran (mode, fusion settings, how many
 // mentions each strategy resolved), with a one-click re-run in either mode.
-function RetrievalSummary({ retrieval, running, error, mode, setMode, onRerun, hybridTuning, tuningOpen, setTuningOpen }) {
+function RetrievalSummary({ retrieval, timings, running, error, mode, setMode, onRerun, hybridTuning, tuningOpen, setTuningOpen }) {
   if (!retrieval) return null;
   const t = retrieval.tuning;
   const strategies = Object.entries(retrieval.strategies || {})
@@ -424,7 +425,7 @@ function RetrievalSummary({ retrieval, running, error, mode, setMode, onRerun, h
     formula: t.fusionMode === "scoreFusion" ? "score = Σ weight × sigmoid(engine score)" : `score = Σ weight / (${t.fusionMode === "rankFusion" ? 60 : t.rrfK} + rank)`,
     weights: { lexical: t.lexicalWeight, semantic: t.semanticWeight },
     candidatePool: t.candidatePool,
-    rerank: { requested: t.rerank, applied: t.rerank, pool: t.rerankPool }
+    rerank: { requested: t.rerank, applied: Boolean(retrieval.strategies?.["hybrid-rerank"]), pool: t.rerankPool, mode: t.rerankMode }
   } : null;
   return (
     <div style={{ border: `1px solid ${BORDER}`, borderRadius: 10, background: "#fff", padding: "10px 12px", marginBottom: 14, display: "grid", gap: 8 }}>
@@ -434,17 +435,21 @@ function RetrievalSummary({ retrieval, running, error, mode, setMode, onRerun, h
         {strategies ? <span style={{ fontSize: 11.5, color: "#5C6C75" }}>per mention: {strategies}</span> : null}
         <RetrievalModeToggle mode={mode} setMode={setMode} disabled={running} />
         <button type="button" style={{ ...primaryBtn, padding: "6px 14px", fontSize: 12 }} disabled={running} onClick={() => onRerun(mode)}>
-          {running ? "Retrieving…" : `Re-run retrieval (${mode})`}
+          {running ? "Grounding and verifying…" : `Re-run retrieval (${mode})`}
         </button>
       </div>
       {algorithm ? (
         <div style={{ fontSize: 11 }}>
           <FusionSummary algorithm={algorithm} />
           <div style={{ fontSize: 11, color: "#889397", marginTop: -6 }}>
-            Requested settings. Per mention, exact lexical hits are merged ahead of the fused candidates, and the grounding scorer then applies its negation / laterality / specificity checks — expand a mention's candidates to see each one's fusion breakdown.
+            Requested settings. {t.fusionMode !== "appRrf" ? "Native fusion runs the retrieval inputs within one aggregation. " : "App-side RRF runs separate retrieval inputs. "}Source verification separately checks negation, laterality and specificity. Expand a mention to inspect the actual execution.
           </div>
         </div>
       ) : null}
+      {timings ? <div style={{ fontSize: 12, color: "#5C6C75" }}>
+        Candidate retrieval{t?.rerankMode === "voyage" && t?.rerank ? " + Voyage reranking" : ""}: {(timings.candidateRetrieval / 1000).toFixed(1)}s
+        {" · "}LLM source verification: {(timings.sourceVerification / 1000).toFixed(1)}s
+      </div> : null}
       {mode === "hybrid" && hybridTuning?.tuning ? (
         <HybridTuningPanel
           open={tuningOpen}

@@ -133,7 +133,7 @@ Navigation supports:
 
 - MongoDB Search over SNOMED terms, synonyms, FSNs, and normalized autocomplete fields.
 - Semantic filters by language, semantic tag, hierarchy scope, and ECL subset.
-- Hybrid retrieval defaults to App-side RRF (two parallel queries), with reranking enabled. Native MongoDB fusion remains available through **Tune** or `HYBRID_FUSION_MODE=rankFusion` / `scoreFusion`.
+- Hybrid retrieval defaults to native MongoDB `$rankFusion`, with reranking enabled. Grounding includes indexed exact-description lookup within the same aggregation as lexical and vector retrieval. App-side RRF remains an explicit comparison mode in **Tune**; native failures do not silently switch to it. See [retrieval design and deployment requirements](docs/NATIVE_GROUNDING_RETRIEVAL.md).
 - Concept detail inspection, hierarchy graph, parents/children, relationships, and release metadata.
 - Explainable generated MQL for advanced/demo mode.
 - ECL and area scopes are cached in the app process after first expansion; first-run attribute-refined scopes can be slower because the candidate set is being built.

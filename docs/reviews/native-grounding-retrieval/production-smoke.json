@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-11-13T10:07:42.425Z",
+  "healthStatus": 200,
+  "healthOk": true,
+  "searchStatus": 200,
+  "engine": "mongodb-rankFusion",
+  "topConceptId": "38341003",
+  "exactDescriptionMatch": true,
+  "rerankApplied": true,
+  "inputNames": [
+    "lexical",
+    "semantic",
+    "exactDescriptions"
+  ]
+}
